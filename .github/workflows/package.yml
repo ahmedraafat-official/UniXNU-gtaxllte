@@ -55,6 +55,8 @@ jobs:
           kind = "soc"
           local = "../UniXNU-exynos7870-common"
           EOF
+      - name: patch UniXNU boot image
+        run: git -C unixnu apply device/patches/unixnu/0001-bootimg-gtaxllte.patch
       - name: tools
         run: |
           brew install dtc llvm lld cmake mtools blacktop/tap/ipsw

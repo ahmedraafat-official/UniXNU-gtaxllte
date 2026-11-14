@@ -1,0 +1,34 @@
+diff --git a/scripts/unixnu/bootimg.py b/scripts/unixnu/bootimg.py
+index de568f8..e2316e8 100644
+--- a/scripts/unixnu/bootimg.py
++++ b/scripts/unixnu/bootimg.py
+@@ -63,6 +63,7 @@ def settings(ctx, uefi):
+     fw = ctx.board.get('firmware', {})
+     config = load_toml(uefi / 'Resources/Configs' / f'{fw["config"]}.toml') if fw.get('config') else {}
+     values = dict(DEFAULTS)
++    values.update(config.get('boot_image_kernel', {}))
+     values.update(config.get('boot_image', {}))
+     values.update(ctx.board.get('bootimg', {}).get('image', {}))
+     fd = config.get('uefi_fd', {})
+@@ -87,12 +88,18 @@ def build(ctx, uefi, fd, dtb, ramdisk=None, output=None):
+         raise Error(f'firmware volume is {len(firmware):#x} bytes, the device config says {size:#x}')
+     out = Path(output) if output else ctx.work / 'boot/boot.img'
+     out.parent.mkdir(parents=True, exist_ok=True)
++    append_dtb = bool(config.get('boot_image_kernel', {}).get('append_dtb', True))
+     with tempfile.TemporaryDirectory(prefix='unixnu-bootimg-') as scratch_name:
+         scratch = Path(scratch_name)
+         shim = compile_shim(uefi, base, size, requires_header, scratch)
+-        tree = patch_dtb(Path(dtb).read_bytes(), ctx.board.get('bootimg', {}).get('dtb_node', []), scratch)
+-        if tree[:4] != b'\xd0\x0d\xfe\xed' or struct.unpack_from('>I', tree, 4)[0] != len(tree):
+-            raise Error('invalid compiled device tree')
++        if append_dtb:
++            tree = patch_dtb(Path(dtb).read_bytes(), ctx.board.get('bootimg', {}).get('dtb_node', []), scratch)
++            if tree[:4] != b'\xd0\x0d\xfe\xed' or struct.unpack_from('>I', tree, 4)[0] != len(tree):
++                raise Error('invalid compiled device tree')
++        else:
++            # Samsung S-Boot uses the phone's dtb partition; the Mu-Silicium
++            # gtaxllte config sets append_dtb = false.
++            tree = b''
+         combined = shim + firmware
+         # [bootimg.image] kernel_compression selects the kernel encoding. The
+         # default keeps the gzip convention; "none" writes the uncompressed
