@@ -4,6 +4,13 @@ Do these in order. Steps 1 and 2 **wipe the tablet**; back up anything you care
 about first. The goal is a set of files and outputs that replaces every public
 address in this repository with a measured one.
 
+On this Mac, `adb`, `dtc` and Python 3.11 are in `../tools/bin`:
+
+```sh
+export PATH="/Users/ahmedraafat/Desktop/hackos/tools/bin:$PATH"
+adb version
+```
+
 You need:
 
 - the SM-T585, charged above 50%

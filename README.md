@@ -66,6 +66,7 @@ The local UniXNU checkout is expected at `../unixnu` (`[package] unixnu`).
 first (or run the packaging on a Linux/macOS CI runner).
 
 ```sh
+export PATH="$(cd .. && pwd)/tools/bin:$PATH"   # Python 3.11, dtc, adb
 cd ../unixnu
 ./unixnu defconfig gtaxllte_defconfig -D ../UniXNU-gtaxllte
 ./unixnu fetch -D ../UniXNU-gtaxllte
