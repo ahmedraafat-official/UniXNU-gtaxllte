@@ -4,4 +4,4 @@
 name = "exynos7870"
 kind = "soc"
 git = "https://github.com/REPLACE-ME/UniXNU-exynos7870-common"
-commit = "51762db2ab31bcdf03357f10df3df3198c7056e1"
+commit = "597db51e36dd545bbb88ab825c8869286c6f16cd"
