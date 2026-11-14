@@ -1,0 +1,100 @@
+schema_version = 2
+
+# Board description of the Samsung Galaxy Tab A 10.1 (2016) LTE, SM-T585,
+# codename gtaxllte (S5E7870 / Exynos 7870). Read by the unixnu build driver.
+#
+# The values here come from two public sources until the tablet's own dump is
+# collected: Mu-Silicium's gtaxllte UEFI port (memory map, FD base, display
+# framebuffer) and the mainline Linux 7.x Exynos 7870 gtaxlwifi device tree
+# (memory banks, secure hole, PMIC/touch wiring). PHASE0.md explains the dump
+# that replaces every "verify" note with measured values.
+
+[board]
+name = "gtaxllte"
+soc = "Exynos 7870"
+soc_source = "exynos7870"
+os_profile = "ipados-17.7.11-21H461"
+description = "Samsung Galaxy Tab A 10.1 (2016) LTE (SM-T585)"
+kit = "gtaxllte"
+
+[components]
+include = ["ArmDTPlatform", "ArmCpu", "SoftwareAES", "XnuPrelink", "DarwinBoot"]
+
+[kernel]
+defconfig = "gtaxllte_defconfig"
+# The shared ARM64 fragment selects ArmCpu and the architectural timer. The
+# SoC fragment turns PAN off: the Cortex-A53s are ARMv8.0.
+config_fragments = ["arch:configs/common.config", "soc:configs/exynos7870.config", "os:configs/ipados.config"]
+patch_series = ["arch:patches/xnu/series", "soc:patches/xnu/series", "os:patches/xnu/series", "device:patches/xnu/series"]
+
+[device_tree]
+source = "device:dts/gtaxllte.dts"
+include_dirs = ["soc:dts"]
+
+[firmware]
+config = "gtaxllte"
+dsc = "Platforms/Samsung/gtaxlltePkg/gtaxllte.dsc"
+fd = "Build/gtaxlltePkg/{target}_CLANGPDB/FV/SILICIUM_UEFI.fd"
+submodules = ["Binaries", "Common/Mu", "Common/Mu_OEM_Sample", "Silicium-ACPI", "Silicon/Silicium/OpensslPkg/Library/OpensslLib/openssl"]
+# Adds UniXNU, UniXNUDxe, UniXNURamDiskDxe and DarwinBoot to the upstream
+# gtaxllte package behind UNIXNU_PAYLOAD. The patch is idempotent.
+preflight = ["scripts/patch-gtaxllte-uefi.py"]
+packages = [
+  "{uefi}",
+  "{uefi}/Platforms/Samsung",
+  "{uefi}/Common/Mu",
+  "{uefi}/Common/Mu_OEM_Sample",
+  "{edk2}",
+  "{uefi}/Silicon/Samsung",
+  "{uefi}/Silicon/Silicium",
+  "{uefi}/Silicium-ACPI",
+  "{uefi}/Silicium-ACPI/Platforms/Samsung",
+  "{uefi}/Silicium-ACPI/Silicon/Samsung",
+  "{tree}/package",
+  "{tree}/drivers/DarwinBoot",
+]
+
+[firmware.defines]
+BUILDID_STRING = "gtaxllte-research"
+DEVICE_MODEL = "0"
+ENABLE_SECUREBOOT = "0"
+MEMORY_PROTECTION = "TRUE"
+SHIP_MODE = "FALSE"
+UNIXNU_PAYLOAD = "1"
+
+[bootimg]
+# Resources/Configs/gtaxllte.toml in Mu-Silicium: Android header v1,
+# requires_kernel_header, FD base 0x43E00000, FD size 0x200000.
+base = 0x10000000
+kernel_offset = 0x8000
+tags_offset = 0x100
+pagesize = 2048
+header_version = 1
+
+[payload]
+volume = "GTAXLLTE"
+# The payload is UEFI-compressed because BOOT is small. 16 MiB held the
+# hero2lte kernel; the Tab A's BOOT size is confirmed in PHASE0.md before the
+# first flash. Raise this only after reading /dev/block/by-name/boot's size.
+size_mib = 16
+compress = "uefi"
+loader = "firmware"
+title = "UniXNU"
+kernel_args = ["-v", "serial=3", "debug=0x14e", "armcpu-diagnostics=1", "-no_slto_panic"]
+
+[package]
+unixnu = "../unixnu"
+
+[package.defconfig]
+"ipados-17.7.11-21H461" = "gtaxllte_defconfig"
+
+[payload.adt]
+# The same iPadOS 17.7.11 profile identity seed used by the other ports. The
+# per-build platform seed is supplied with --unique-chip-id.
+chip_id = "207"
+unique_chip_id = "required"
+# XNU takes one contiguous owned window. In the UEFI memory map the largest
+# free run in the second bank is 0x90014000-0xAE600000 (about 470 MiB), so
+# 448 MiB fits with margin. Freeing the unused ION heaps in the UEFI map is
+# milestone M4; until then do not raise this past 0x1D000000.
+owned_memory_size = "0x1C000000"

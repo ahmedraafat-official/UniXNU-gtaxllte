@@ -1,0 +1,7 @@
+# The SoC repository is not published yet. local.toml (ignored by Git) points
+# the build at the sibling checkout; after pushing, this git source is used.
+[[source]]
+name = "exynos7870"
+kind = "soc"
+git = "https://github.com/REPLACE-ME/UniXNU-exynos7870-common"
+commit = "51762db2ab31bcdf03357f10df3df3198c7056e1"

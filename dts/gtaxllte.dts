@@ -1,0 +1,102 @@
+// SPDX-License-Identifier: BSD-2-Clause-Patent
+//
+// Samsung Galaxy Tab A 10.1 (2016) LTE, SM-T585, codename gtaxllte.
+//
+// Memory and reservations come from two public sources until the tablet's own
+// stock DTB is dumped (PHASE0.md):
+//   - mainline linux-exynos7870, gtaxlwifi/7.3: two 1 GiB banks with a 28 MiB
+//     secure-world hole at 0x7e400000, framebuffer at 0x67000000
+//   - Mu-Silicium gtaxlltePkg: UEFI FD/stack/heap, TIMA, ION, ECT, MFC,
+//     modem and GNSS carveouts
+//
+// The memory node spans both banks; the hole and every firmware carveout are
+// reserved. XNU's owned window is taken from the second bank, where the UEFI
+// memory map leaves the largest free run.
+/dts-v1/;
+/include/ "exynos7870.dtsi"
+
+/ {
+    model = "Samsung Galaxy Tab A 10.1 (2016) LTE (SM-T585)";
+    compatible = "samsung,gtaxllte", "samsung,exynos7870";
+
+    memory@40000000 {
+        device_type = "memory";
+        reg = <0 0x40000000 0 0x80000000>;
+    };
+
+    reserved-memory {
+        #address-cells = <2>;
+        #size-cells = <2>;
+        ranges;
+
+        // 0x7e400000-0x80000000 belongs to the secure world. Mapping it
+        // causes an external abort, so the two banks must not be merged.
+        secure-hole@7e400000 {
+            reg = <0 0x7e400000 0 0x01c00000>;
+            no-map;
+        };
+
+        // S-BOOT leaves the panel scanning out this buffer. The UEFI reserves
+        // 0x1194000 (two 1200x1920x4 buffers); the kernel must keep off both.
+        framebuffer@67000000 {
+            reg = <0 0x67000000 0 0x01194000>;
+            no-map;
+        };
+
+        // UEFI FD (2 MiB), stack (256 KiB) and DXE heap (84 MiB).
+        uefi@43e00000 {
+            reg = <0 0x43e00000 0 0x05640000>;
+            no-map;
+        };
+
+        tima@52a00000 {
+            reg = <0 0x52a00000 0 0x00200000>;
+            no-map;
+        };
+
+        // Vendor ION heaps, unused by UniXNU. They are released to XNU in
+        // milestone M4; until then DarwinBoot must not place its window here.
+        ion@80000000 {
+            reg = <0 0x80000000 0 0x09400000>;
+            no-map;
+        };
+
+        // Exynos Character Table: the bootloader's DVFS tables.
+        ect@90000000 {
+            reg = <0 0x90000000 0 0x00014000>;
+            no-map;
+        };
+
+        mfc@ae600000 {
+            reg = <0 0xae600000 0 0x00400000>;
+            no-map;
+        };
+
+        dram-init@affff000 {
+            reg = <0 0xaffff000 0 0x00001000>;
+            no-map;
+        };
+
+        // The Shannon CP and GNSS firmware regions. Keep them out of XNU's
+        // memory even though the modem driver is not started yet.
+        modem@b0000000 {
+            reg = <0 0xb0000000 0 0x07800000>;
+            no-map;
+        };
+
+        gnss@b7c00000 {
+            reg = <0 0xb7c00000 0 0x00400000>;
+            no-map;
+        };
+    };
+};
+
+// First bring-up runs on cpu0. Enable 1-7 after the kernel reaches its entry
+// checkpoint and the GIC-400 timer/IPI path is confirmed on hardware.
+&cpu1 { status = "disabled"; };
+&cpu2 { status = "disabled"; };
+&cpu3 { status = "disabled"; };
+&cpu4 { status = "disabled"; };
+&cpu5 { status = "disabled"; };
+&cpu6 { status = "disabled"; };
+&cpu7 { status = "disabled"; };

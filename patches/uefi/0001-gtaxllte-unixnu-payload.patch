@@ -1,0 +1,49 @@
+--- a/Platforms/Samsung/gtaxlltePkg/gtaxllte.dsc	2026-11-15 00:30:27
++++ b/Platforms/Samsung/gtaxlltePkg/gtaxllte.dsc	2026-11-15 00:30:28
+@@ -24,6 +24,7 @@
+   SKUID_IDENTIFIER               = DEFAULT
+   FLASH_DEFINITION               = gtaxlltePkg/gtaxllte.fdf
+   USE_CUSTOM_DISPLAY_DRIVER      = 0
++  UNIXNU_PAYLOAD                 = 0
+ 
+ !include S5E7870Pkg/S5E7870Pkg.dsc.inc
+ 
+@@ -66,6 +67,11 @@
+   #
+   KeypadDeviceLib|gtaxlltePkg/Library/KeypadDeviceLib/KeypadDeviceLib.inf
+ 
++!if $(UNIXNU_PAYLOAD) == 1
++  # UniXNU package, supplied by the device build tree.
++  UniXNULib|UniXNUPkg/Library/UniXNULib/UniXNULib.inf
++!endif
++
+ [Components]
+   #
+   # ACPI Tables
+@@ -77,3 +83,11 @@
+   #
+   SiliciumPkg/Drivers/KeypadDxe/KeypadDxe.inf
+   SiliciumPkg/Drivers/KeypadDeviceDxe/KeypadDeviceDxe.inf
++
++!if $(UNIXNU_PAYLOAD) == 1
++  # UniXNU loader, ramdisk and Darwin handoff.
++  UniXNUPkg/Application/UniXNU/UniXNU.inf
++  UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
++  UniXNUPkg/Driver/UniXNURamDiskDxe/UniXNURamDiskDxe.inf
++  DarwinBootPkg/Driver/DarwinBoot.inf
++!endif
+--- a/Platforms/Samsung/gtaxlltePkg/Include/DXE.inc	2026-11-15 00:30:27
++++ b/Platforms/Samsung/gtaxlltePkg/Include/DXE.inc	2026-11-15 00:30:28
+@@ -40,4 +40,12 @@
+ 
+   INF SamsungPkg/Drivers/RngDxe/RngDxe.inf
+ 
++!if $(UNIXNU_PAYLOAD) == 1
++  # Payload FAT and RAM disk access, then the UniXNU loader and Darwin handoff.
++  INF UniXNUPkg/Driver/UniXNURamDiskDxe/UniXNURamDiskDxe.inf
++  INF UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
++  INF UniXNUPkg/Application/UniXNU/UniXNU.inf
++  INF DarwinBootPkg/Driver/DarwinBoot.inf
++!endif
++
+   INF MdeModulePkg/Universal/BdsDxe/BdsDxe.inf
