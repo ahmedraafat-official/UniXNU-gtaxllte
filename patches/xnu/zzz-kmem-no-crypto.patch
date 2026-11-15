@@ -1,0 +1,26 @@
+--- a/osfmk/vm/vm_kern.c	2026-11-16 00:01:39
++++ b/osfmk/vm/vm_kern.c	2026-11-16 00:01:39
+@@ -2584,6 +2584,11 @@
+ {
+ 	vm_size_t ctx_size = crypto_random_kmem_ctx_size();
+ 
++	/* Native bring-up: no crypto provider yet; leave the kmem RNG unset. */
++	if (ctx_size == 0) {
++		return;
++	}
++
+ 	for (uint32_t i = 0; i < KMEM_NUM_SIZECLASS; i++) {
+ 		struct kmem_sizeclass *ks = &kmem_size_array[i];
+ 
+--- a/libkern/crypto/corecrypto_rand.c	2026-11-16 00:01:39
++++ b/libkern/crypto/corecrypto_rand.c	2026-11-16 00:01:39
+@@ -73,6 +73,9 @@
+ size_t
+ crypto_random_kmem_ctx_size(void)
+ {
++	if (g_crypto_funcs == NULL || g_crypto_funcs->random_kmem_ctx_size_fn == NULL) {
++		return 0;
++	}
+ 	return g_crypto_funcs->random_kmem_ctx_size_fn();
+ }
+ 

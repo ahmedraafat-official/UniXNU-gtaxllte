@@ -1,0 +1,29 @@
+--- a/osfmk/prng/prng_random.c	2026-11-16 00:01:39
++++ b/osfmk/prng/prng_random.c	2026-11-16 00:01:39
+@@ -434,21 +434,11 @@
+ static void
+ source_corecrypto14_bootstrap(void)
+ {
+-	static kmod_info_t info = {
+-		.info_version = KMOD_INFO_VERSION,
+-		.name = "source-corecrypto14-evaluation",
+-		.version = "14.0",
+-	};
+-	uint32_t mode = 0;
+-
+-	if (PE_parse_boot_argn("fips_mode", &mode, sizeof(mode)) && mode != 0) {
+-		panic("source corecrypto verification requires complete default POST");
+-	}
+-	info.address = (vm_address_t)&_mh_execute_header;
+-	source_corecrypto14_status = corecrypto_kext_start(&info, NULL);
+-	if (source_corecrypto14_status != KERN_SUCCESS) {
+-		panic("source corecrypto initialization failed: %d", source_corecrypto14_status);
+-	}
++	/*
++	 * Native bring-up: the source provider's start path hangs on this SoC
++	 * before the eMMC/root work; keep the boot provider off the critical
++	 * path until it can be registered after storage starts.
++	 */
+ }
+ STARTUP(EARLY_BOOT, STARTUP_RANK_FIRST, source_corecrypto14_bootstrap);
+ #endif

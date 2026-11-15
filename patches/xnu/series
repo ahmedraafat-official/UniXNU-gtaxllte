@@ -1,5 +1,6 @@
 # Board patch paths, one per line in application order.
-zzz-source-crypto-fips.patch
+zzz-source-crypto-hold.patch
+zzz-kmem-no-crypto.patch
 zzz-native-uuid.patch
 zzz-trustcache-stub.patch
 zzz-panic-framebuffer.patch
