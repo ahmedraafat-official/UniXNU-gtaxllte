@@ -1,0 +1,26 @@
+--- a/bsd/kern/kern_trustcache.c	2026-11-15 20:42:53
++++ b/bsd/kern/kern_trustcache.c	2026-11-15 20:42:53
+@@ -466,18 +466,12 @@
+ #ifdef XNU_PLATFORM_BridgeOS
+ 	allow_legacy_caches = true;
+ #endif
+-
+-	/* Image4 interface needs to be available */
+-	if (img4if == NULL) {
+-		panic("image4 interface not available");
+-	}
+ 
+-	/* AMFI interface needs to be available */
+-	if (amfi == NULL) {
+-		panic("amfi interface not available");
+-	} else if (amfi->TrustCache.version < 2) {
+-		panic("amfi interface is stale: %u", amfi->TrustCache.version);
+-	}
++	/*
++	 * Native bring-up: the prelinked Image4 and AMFI kexts are absent. The
++	 * empty runtime is safe; loading a trust cache fails closed until those
++	 * interfaces are provided.
++	 */
+ 
+ 	trustCacheInitializeRuntime(
+ 		trust_cache_rt,
