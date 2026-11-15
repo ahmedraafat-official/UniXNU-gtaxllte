@@ -19,9 +19,12 @@
     model = "Samsung Galaxy Tab A 10.1 (2016) LTE (SM-T585)";
     compatible = "samsung,gtaxllte", "samsung,exynos7870";
 
-    memory@40000000 {
+    // One contiguous bank that contains the XNU owned window. The first bank
+    // at 0x40000000 has the 0x7e400000 secure hole; keeping it out of the ADT
+    // DRAM range means the kernel's early physical-memory walk never covers it.
+    memory@80000000 {
         device_type = "memory";
-        reg = <0 0x40000000 0 0x80000000>;
+        reg = <0 0x80000000 0 0x40000000>;
     };
 
     reserved-memory {
