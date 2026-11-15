@@ -56,7 +56,9 @@ jobs:
           local = "../UniXNU-exynos7870-common"
           EOF
       - name: patch UniXNU boot image
-        run: git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0001-bootimg-gtaxllte.patch"
+        run: |
+          git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0001-bootimg-gtaxllte.patch"
+          git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0002-payload-strip.patch"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"

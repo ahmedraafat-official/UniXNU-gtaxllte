@@ -78,7 +78,7 @@ volume = "GTAXLLTE"
 # The payload is UEFI-compressed because BOOT is small. 16 MiB held the
 # hero2lte kernel; the Tab A's BOOT size is confirmed in PHASE0.md before the
 # first flash. Raise this only after reading /dev/block/by-name/boot's size.
-size_mib = 29
+size_mib = 16
 compress = "uefi"
 loader = "firmware"
 title = "UniXNU"
@@ -86,6 +86,7 @@ kernel_args = ["-v", "serial=3", "debug=0x14e", "armcpu-diagnostics=1", "-no_slt
 # Draw the XNU entry bars and a panic screen on the firmware framebuffer. The
 # tablet has no accessible UART, so this is the M2 log route.
 panic_screen = true
+strip = true
 
 [package]
 unixnu = "../unixnu"
