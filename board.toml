@@ -62,9 +62,11 @@ MEMORY_PROTECTION = "TRUE"
 SHIP_MODE = "FALSE"
 UNIXNU_PAYLOAD = "1"
 
-[bootimg]
+[bootimg.image]
 # Resources/Configs/gtaxllte.toml in Mu-Silicium: Android header v1,
 # requires_kernel_header, FD base 0x43E00000, FD size 0x200000.
+# Samsung S-Boot loads the kernel at base + kernel_offset and expects the
+# 2048-byte page layout; the UniXNU defaults are for fastboot devices.
 base = 0x10000000
 kernel_offset = 0x8000
 tags_offset = 0x100

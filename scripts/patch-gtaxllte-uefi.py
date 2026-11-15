@@ -22,6 +22,7 @@ from pathlib import Path
 PATCHES = (
     ("0001-gtaxllte-unixnu-payload.patch", "Platforms/Samsung/gtaxlltePkg/gtaxllte.dsc", "UNIXNU_PAYLOAD"),
     ("0002-gtaxllte-bootshim-image-size.patch", "BootShim/BootShim.S", "_Payload - _Head + FD_SIZE"),
+    ("0003-gtaxllte-bootshim-cntfrq.patch", "BootShim/BootShim.S", "cntfrq_el0"),
 )
 
 
