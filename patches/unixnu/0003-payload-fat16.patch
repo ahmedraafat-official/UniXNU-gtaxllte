@@ -1,0 +1,20 @@
+diff --git a/scripts/unixnu/payload.py b/scripts/unixnu/payload.py
+index 4dcbfdc..2bc3454 100644
+--- a/scripts/unixnu/payload.py
++++ b/scripts/unixnu/payload.py
+@@ -80,7 +80,14 @@ def write_volume(stage, image, label, size_mib):
+     image.unlink(missing_ok=True)
+     env = dict(os.environ, MTOOLS_SKIP_CHECK='1', TZ='UTC')
+     sectors = size_mib * 2048
+-    run(['mformat', '-C', '-F', '-T', str(sectors), '-v', label, '-N', '53484e47', '-i', image, '::'], env=env, capture=True)
++    if size_mib <= 30:
++        # EnhancedFatDxe rejects a FAT32 volume with fewer than 65,525
++        # clusters, which every small payload is. One 512-byte sector per
++        # cluster keeps the count inside FAT16's 4,085..65,525 window.
++        run(['mformat', '-C', '-T', str(sectors), '-h', '64', '-s', '32', '-c', '1',
++             '-v', label, '-N', '53484e47', '-i', image, '::'], env=env, capture=True)
++    else:
++        run(['mformat', '-C', '-F', '-T', str(sectors), '-v', label, '-N', '53484e47', '-i', image, '::'], env=env, capture=True)
+     for entry in sorted(stage.iterdir()):
+         run(['mcopy', '-i', image, '-s', '-Q', '-m', entry, '::/'], env=env, capture=True)
+ 
