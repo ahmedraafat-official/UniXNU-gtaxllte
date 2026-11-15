@@ -34,6 +34,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: UniXNU/UniXNU
+          # Pin the tool that the device patches apply to. Main advanced on
+          # 2026-11-15 16:58 UTC and changed scripts/unixnu/bootimg.py.
+          ref: 75904b1a8ce19d30b91042e25b815d5a1e3b8525
           path: unixnu
           submodules: recursive
       - uses: actions/checkout@v4
