@@ -4,11 +4,12 @@ CONFIG_XNU_SOURCE_CORECRYPTO14=y
 CONFIG_XNU_SOURCE_PTHREAD=y
 CONFIG_XNU_ARM_DT_PLATFORM=y
 CONFIG_XNU_ARMCPU=y
-# A native (--skip-prelink) kernel has no original crypto kext to register
-# g_crypto_funcs. The source corecrypto provider must initialize it, or the
-# first SHA-1 user (IOPlatformExpertDevice::generatePlatformUUID) faults on a
-# NULL digest table.
-CONFIG_XNU_CRYPTO_BOOTSTRAP="source"
+# The native kernel does not register the source crypto provider yet: its
+# start path hangs on this SoC before storage bring-up. Prelinked mode compiles
+# the source bootstrap out (no seal-script requirement), and
+# zzz-kmem-no-crypto.patch makes the kmem wrapper tolerate the empty table.
+# The platform UUID is crypto-free; restore the provider after eMMC/root work.
+CONFIG_XNU_CRYPTO_BOOTSTRAP="prelinked"
 # No storage, display, input or GPU driver yet. The first image stops at the
 # root mount after the kernel entry checkpoint.
 # CONFIG_XNU_NATIVE_UFS is not set
