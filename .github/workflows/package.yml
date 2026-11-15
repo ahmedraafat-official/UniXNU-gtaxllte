@@ -59,11 +59,11 @@ jobs:
         run: git -C unixnu apply device/patches/unixnu/0001-bootimg-gtaxllte.patch
       - name: tools
         run: |
-          brew install dtc llvm lld cmake mtools blacktop/tap/ipsw
+          brew install dtc llvm lld cmake ninja mtools unifdef acpica blacktop/tap/ipsw
           # Fail fast, naming the tool, before forty minutes of build.
           ok=1
           for t in clang xcodebuild make git ninja cmake dtc fdtget fdtput aea compression_tool \
-                   mformat mcopy ipsw; do
+                   mformat mcopy unifdef iasl ipsw; do
             command -v "$t" >/dev/null || { echo "missing tool: $t"; ok=0; }
           done
           for t in lld-link llvm-lib llvm-rc llvm-nm llvm-objcopy; do
@@ -83,7 +83,8 @@ jobs:
         env:
           UNIXNU_UNIQUE_CHIP_ID: ${{ secrets.UNIXNU_UNIQUE_CHIP_ID }}
           GITHUB_TOKEN: ${{ github.token }}
-        run: scripts/package.sh --os "${{ inputs.os }}" --uefi ../uefi-gtaxllte
+          IASL_PREFIX: /opt/homebrew/bin/
+        run: scripts/package.sh --os "${{ inputs.os }}" --uefi ../uefi-gtaxllte --edk2 ../uefi-gtaxllte/Mu_Basecore
       - name: images
         uses: actions/upload-artifact@v4
         with:
