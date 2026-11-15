@@ -19,6 +19,10 @@ UEFI patches, each idempotent:
   0004-gtaxllte-ramdisk-mapping.patch
       declares the 14 MiB ramdisk window at 0x43000000 in the UEFI memory
       map, so the MMU maps the payload volume the driver reads
+  0005-gtaxllte-dtb-reservation.patch
+      ends the DXE heap at 0x48000000 and reserves the 2 MiB S-Boot device
+      tree there, so the heap cannot overwrite /chosen before the ramdisk
+      driver reads the initrd range
 
 The edk2 timer libraries are patched in place: S-Boot leaves CNTFRQ_EL0 at
 zero, and both the ARM arch timer and the generic timer counter must fall back
@@ -36,6 +40,7 @@ PATCHES = (
     ("0002-gtaxllte-bootshim-image-size.patch", "BootShim/BootShim.S", "_Payload - _Head + FD_SIZE"),
     ("0003-gtaxllte-entry-arg-hob.patch", "Silicon/Silicium/SiliciumPkg/Sec/Sec.c", "mEntryArgHobGuid"),
     ("0004-gtaxllte-ramdisk-mapping.patch", "Platforms/Samsung/gtaxlltePkg/Library/MemoryMapLib/MemoryMapLib.c", "Payload RAM disk"),
+    ("0005-gtaxllte-dtb-reservation.patch", "Platforms/Samsung/gtaxlltePkg/Library/MemoryMapLib/MemoryMapLib.c", "S-Boot DTB"),
 )
 
 TIMER_COUNTER_LIBS = (

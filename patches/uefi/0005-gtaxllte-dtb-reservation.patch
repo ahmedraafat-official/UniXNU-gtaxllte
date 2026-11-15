@@ -1,0 +1,16 @@
+diff --git a/Platforms/Samsung/gtaxlltePkg/Library/MemoryMapLib/MemoryMapLib.c b/Platforms/Samsung/gtaxlltePkg/Library/MemoryMapLib/MemoryMapLib.c
+--- a/Platforms/Samsung/gtaxlltePkg/Library/MemoryMapLib/MemoryMapLib.c
++++ b/Platforms/Samsung/gtaxlltePkg/Library/MemoryMapLib/MemoryMapLib.c
+@@ -12,7 +12,11 @@
+   {"Payload RAM disk",   0x43000000, 0x00E00000, AddMem, SYS_MEM, SYS_MEM_CAP, Reserv, WRITE_BACK},
+   {"UEFI FD",            0x43E00000, 0x00200000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
+   {"UEFI Stack",         0x44000000, 0x00040000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
+-  {"DXE Heap",           0x44040000, 0x05400000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv,   WRITE_BACK},
++  {"DXE Heap",           0x44040000, 0x03FC0000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv,   WRITE_BACK},
++  // S-Boot loads the selected device tree at 0x48000000 and patches /chosen
++  // there. Reserve it so the DXE heap cannot overwrite the initrd range before
++  // UniXNURamDiskDxe reads it.
++  {"S-Boot DTB",         0x48000000, 0x00200000, AddMem, SYS_MEM, SYS_MEM_CAP, Reserv, WRITE_BACK},
+   {"TIMA Region",        0x52A00000, 0x00200000, AddMem, SYS_MEM, SYS_MEM_CAP, Reserv, WRITE_BACK},
+   {"Display Reserved",   0x67000000, 0x01194000, AddMem, MEM_RES, SYS_MEM_CAP, Reserv, WRITE_THROUGH},
+   {"ION Crypto",         0x80000000, 0x00600000, AddMem, SYS_MEM, SYS_MEM_CAP, Reserv, WRITE_BACK},
