@@ -69,8 +69,10 @@ jobs:
         if: ${{ inputs.prelink }}
         run: |
           cat > device/patches/xnu/series <<'EOF'
-          # Prelinked kernel: native-only workarounds are omitted.
+          # Prelinked kernel: native-only workarounds are omitted. The early
+          # framebuffer and the read-only eMMC probe are diagnostics.
           zzz-panic-framebuffer.patch
+          zzz-emmc-probe.patch
           EOF
       - name: native config audit
         # Fail before the 40-minute build if the defconfig still assumes the
