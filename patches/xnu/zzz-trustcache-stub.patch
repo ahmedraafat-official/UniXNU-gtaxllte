@@ -1,26 +1,39 @@
---- a/bsd/kern/kern_trustcache.c	2026-11-15 20:42:53
-+++ b/bsd/kern/kern_trustcache.c	2026-11-15 20:42:53
-@@ -466,18 +466,12 @@
- #ifdef XNU_PLATFORM_BridgeOS
+--- a/bsd/kern/kern_trustcache.c	2026-11-15 22:51:13
++++ b/bsd/kern/kern_trustcache.c	2026-11-15 22:51:13
+@@ -448,6 +448,22 @@
+ TrustCacheMutableRuntime_t trust_cache_mut_rt_storage;
+ SECURITY_READ_ONLY_LATE(TrustCacheMutableRuntime_t*) trust_cache_mut_rt = &trust_cache_mut_rt_storage;
+ 
++/*
++ * Native bring-up: the prelinked Image4 and AMFI kexts are absent. The runtime
++ * initializer reads img4if and requires an AMFI trust-cache version; empty
++ * static interfaces keep the empty runtime working. Loading a trust cache
++ * still fails closed because the function tables are empty.
++ */
++static const img4_interface_t gtaxllte_img4_stub = {
++	.i4if_version = 15,
++};
++
++static const amfi_t gtaxllte_amfi_stub = {
++	.TrustCache = {
++		.version = TRUST_CACHE_INTERFACE_VERSION,
++	},
++};
++
+ void
+ trust_cache_runtime_init(void)
+ {
+@@ -467,6 +483,13 @@
  	allow_legacy_caches = true;
  #endif
--
--	/* Image4 interface needs to be available */
--	if (img4if == NULL) {
--		panic("image4 interface not available");
--	}
  
--	/* AMFI interface needs to be available */
--	if (amfi == NULL) {
--		panic("amfi interface not available");
--	} else if (amfi->TrustCache.version < 2) {
--		panic("amfi interface is stale: %u", amfi->TrustCache.version);
--	}
-+	/*
-+	 * Native bring-up: the prelinked Image4 and AMFI kexts are absent. The
-+	 * empty runtime is safe; loading a trust cache fails closed until those
-+	 * interfaces are provided.
-+	 */
- 
- 	trustCacheInitializeRuntime(
- 		trust_cache_rt,
++	if (img4if == NULL) {
++		img4if = &gtaxllte_img4_stub;
++	}
++	if (amfi == NULL) {
++		amfi = &gtaxllte_amfi_stub;
++	}
++
+ 	/* Image4 interface needs to be available */
+ 	if (img4if == NULL) {
+ 		panic("image4 interface not available");
