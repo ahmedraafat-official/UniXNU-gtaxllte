@@ -87,7 +87,8 @@ jobs:
           UNIXNU_UNIQUE_CHIP_ID: ${{ secrets.UNIXNU_UNIQUE_CHIP_ID }}
           GITHUB_TOKEN: ${{ github.token }}
           IASL_PREFIX: /opt/homebrew/bin/
-        run: scripts/package.sh --os "${{ inputs.os }}" --uefi ../uefi-gtaxllte --edk2 ../uefi-gtaxllte/Mu_Basecore --dtb ../uefi-gtaxllte/Resources/DTBs/gtaxllte.dtb
+          UNIXNU_DTB: ../uefi-gtaxllte/Resources/DTBs/gtaxllte.dtb
+        run: scripts/package.sh --os "${{ inputs.os }}" --uefi ../uefi-gtaxllte --edk2 ../uefi-gtaxllte/Mu_Basecore
       - name: images
         uses: actions/upload-artifact@v4
         with:
