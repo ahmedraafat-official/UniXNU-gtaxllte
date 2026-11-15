@@ -88,7 +88,7 @@ timeout = 30
 kernel_args = ["-v", "serial=3", "debug=0x14e", "armcpu-diagnostics=1", "-no_slto_panic"]
 # Draw the XNU entry bars and a panic screen on the firmware framebuffer. The
 # tablet has no accessible UART, so this is the M2 log route.
-panic_screen = true
+panic_screen = false
 strip = true
 # Stage 3 probe: reboot 5 s after the kernel turns the MMU on. A reboot means
 # the MMU enable worked and the stall is later; staying on the bars means the
