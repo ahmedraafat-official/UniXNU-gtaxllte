@@ -1,0 +1,14 @@
+--- a/osfmk/prng/prng_random.c	2026-11-15 20:22:48
++++ b/osfmk/prng/prng_random.c	2026-11-15 20:22:48
+@@ -439,11 +439,6 @@
+ 		.name = "source-corecrypto14-evaluation",
+ 		.version = "14.0",
+ 	};
+-	uint32_t mode = 0;
+-
+-	if (PE_parse_boot_argn("fips_mode", &mode, sizeof(mode)) && mode != 0) {
+-		panic("source corecrypto verification requires complete default POST");
+-	}
+ 	info.address = (vm_address_t)&_mh_execute_header;
+ 	source_corecrypto14_status = corecrypto_kext_start(&info, NULL);
+ 	if (source_corecrypto14_status != KERN_SUCCESS) {

@@ -1,0 +1,40 @@
+--- a/iokit/Kernel/IOPlatformExpert.cpp	2026-11-15 20:22:29
++++ b/iokit/Kernel/IOPlatformExpert.cpp	2026-11-15 20:22:29
+@@ -2219,20 +2219,24 @@
+ 
+ 			data2 = OSDynamicCast( OSData, entry->getProperty( "chip-id" ));
+ 			if (data2 && data2->getLength() == 4) {
+-				SHA1_CTX     context;
+-				uint8_t      digest[SHA_DIGEST_LENGTH];
+-				const uuid_t space = { 0xA6, 0xDD, 0x4C, 0xCB, 0xB5, 0xE8, 0x4A, 0xF5, 0xAC, 0xDD, 0xB6, 0xDC, 0x6A, 0x05, 0x42, 0xB8 };
+-
+-				SHA1Init( &context );
+-				SHA1Update( &context, space, sizeof(space));
+-				SHA1Update( &context, data1->getBytesNoCopy(), data1->getLength());
+-				SHA1Update( &context, data2->getBytesNoCopy(), data2->getLength());
+-				SHA1Final( digest, &context );
+-
+-				digest[6] = (digest[6] & 0x0F) | 0x50;
+-				digest[8] = (digest[8] & 0x3F) | 0x80;
++				/*
++				 * The native kernel reaches this before the source crypto
++				 * provider is registered. The UUID only has to be stable per
++				 * device, so build it from the same chip bytes without
++				 * SHA-1; restore the digest once the provider runs earlier.
++				 */
++				uint8_t uuidBytes[16];
+ 
+-				uuid_unparse( digest, uuid );
++				memcpy(uuidBytes, data1->getBytesNoCopy(), 8);
++				memcpy(uuidBytes + 8, data2->getBytesNoCopy(), 4);
++				uuidBytes[12] = 'g';
++				uuidBytes[13] = 't';
++				uuidBytes[14] = 'a';
++				uuidBytes[15] = 'x';
++				uuidBytes[6] = (uuidBytes[6] & 0x0F) | 0x50;
++				uuidBytes[8] = (uuidBytes[8] & 0x3F) | 0x80;
++
++				uuid_unparse( uuidBytes, uuid );
+ 				string = OSString::withCString( uuid );
+ 			}
+ 		}
