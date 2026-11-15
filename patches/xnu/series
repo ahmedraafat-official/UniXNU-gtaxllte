@@ -1,3 +1,4 @@
 # Board patch paths, one per line in application order.
+zzz-source-crypto.patch
 zzz-panic-framebuffer.patch
 zzz-emmc-probe.patch
