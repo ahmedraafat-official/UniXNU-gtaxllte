@@ -1,9 +1,10 @@
---- a/bsd/kern/kern_trustcache.c	2026-11-15 22:51:13
-+++ b/bsd/kern/kern_trustcache.c	2026-11-15 22:51:13
-@@ -448,6 +448,22 @@
+--- a/bsd/kern/kern_trustcache.c	2026-11-15 23:38:55
++++ b/bsd/kern/kern_trustcache.c	2026-11-15 23:38:55
+@@ -447,6 +447,22 @@
+ /* Mutable part of the runtime */
  TrustCacheMutableRuntime_t trust_cache_mut_rt_storage;
  SECURITY_READ_ONLY_LATE(TrustCacheMutableRuntime_t*) trust_cache_mut_rt = &trust_cache_mut_rt_storage;
- 
++
 +/*
 + * Native bring-up: the prelinked Image4 and AMFI kexts are absent. The runtime
 + * initializer reads img4if and requires an AMFI trust-cache version; empty
@@ -19,21 +20,30 @@
 +		.version = TRUST_CACHE_INTERFACE_VERSION,
 +	},
 +};
-+
+ 
  void
  trust_cache_runtime_init(void)
- {
-@@ -467,6 +483,13 @@
+@@ -466,6 +482,13 @@
+ #ifdef XNU_PLATFORM_BridgeOS
  	allow_legacy_caches = true;
  #endif
- 
++
 +	if (img4if == NULL) {
 +		img4if = &gtaxllte_img4_stub;
 +	}
 +	if (amfi == NULL) {
 +		amfi = &gtaxllte_amfi_stub;
 +	}
-+
+ 
  	/* Image4 interface needs to be available */
  	if (img4if == NULL) {
- 		panic("image4 interface not available");
+@@ -997,6 +1020,9 @@
+ 	/* Mark this function as having been called */
+ 	trust_cache_static_init = true;
+ 
++	/* Native bring-up: this device provides no static trust cache. */
++	return;
++
+ 	/* Nothing to do when the runtime isn't set */
+ 	if (trust_cache_rt == NULL) {
+ 		return;
