@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 REQUIRED = {
-    'CONFIG_XNU_CRYPTO_BOOTSTRAP': 'source',
+    'CONFIG_XNU_CRYPTO_BOOTSTRAP': 'prelinked',
     'CONFIG_XNU_NATIVE_AES': 'n',
 }
 
@@ -50,6 +50,13 @@ def main():
         include = re.search(r'^include\s*=\s*\[(.*?)\]', board, re.M | re.S)
         if include and 'SoftwareAES' in include.group(1):
             errors.append('[components] include still selects SoftwareAES')
+
+    # In this native port "prelinked" means "leave the source provider
+    # unregistered"; the kernel must then carry the NULL-safe kmem wrapper.
+    series = args.defconfig.resolve().parent.parent / 'patches/xnu/series'
+    if values.get('CONFIG_XNU_CRYPTO_BOOTSTRAP') == 'prelinked':
+        if not series.is_file() or 'zzz-kmem-no-crypto.patch' not in series.read_text():
+            errors.append('prelinked crypto mode needs zzz-kmem-no-crypto.patch in patches/xnu/series')
 
     if errors:
         print(f'{args.defconfig}: native-kernel assumptions:')
