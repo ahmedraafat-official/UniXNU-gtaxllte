@@ -4,7 +4,11 @@ CONFIG_XNU_SOURCE_CORECRYPTO14=y
 CONFIG_XNU_SOURCE_PTHREAD=y
 CONFIG_XNU_ARM_DT_PLATFORM=y
 CONFIG_XNU_ARMCPU=y
-CONFIG_XNU_CRYPTO_BOOTSTRAP="prelinked"
+# A native (--skip-prelink) kernel has no original crypto kext to register
+# g_crypto_funcs. The source corecrypto provider must initialize it, or the
+# first SHA-1 user (IOPlatformExpertDevice::generatePlatformUUID) faults on a
+# NULL digest table.
+CONFIG_XNU_CRYPTO_BOOTSTRAP="source"
 # No storage, display, input or GPU driver yet. The first image stops at the
 # root mount after the kernel entry checkpoint.
 # CONFIG_XNU_NATIVE_UFS is not set
