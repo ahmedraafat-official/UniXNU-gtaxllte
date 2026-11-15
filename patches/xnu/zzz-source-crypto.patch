@@ -1,55 +1,46 @@
---- a/osfmk/arm/arm_init.c	2026-11-15 18:23:34
-+++ b/osfmk/arm/arm_init.c	2026-11-15 18:23:34
-@@ -73,7 +73,14 @@
+--- a/osfmk/arm/arm_init.c	2026-11-15 18:49:13
++++ b/osfmk/arm/arm_init.c	2026-11-15 18:49:13
+@@ -73,7 +73,10 @@
  #include <libkern/section_keywords.h>
  #include <san/kasan.h>
  #include <sys/kdebug.h>
-+#include <libkern/crypto/register_crypto.h>
-+#include <corecrypto/ccdigest.h>
-+#include <corecrypto/ccsha1.h>
-+#include <corecrypto/ccsha2.h>
++#include <mach/kmod.h>
  
-+/* The source corecrypto digest infos are linked into the kernel. */
-+extern const struct ccdigest_info ccmd5_ltc_di;
++extern kern_return_t corecrypto_kext_start(kmod_info_t *, void *);
 +
  #include <pexpert/pexpert.h>
  
  #include <console/serial_protos.h>
-@@ -337,6 +344,28 @@
- }
- 
- /*
-+ * A native (--skip-prelink) kernel has no original corecrypto kext to call
-+ * register_crypto_functions(). The kernel does carry the source corecrypto
-+ * digest implementations, so publish those before IOKit's first SHA-1 user
-+ * (IOPlatformExpertDevice::generatePlatformUUID) runs.
+@@ -334,6 +337,23 @@
+ 	/* DATA TBI, if enabled, affects the number of VA bits that contain the signature */
+ 	arm_set_kernel_tbi();
+ #endif /* __arm64 */
++}
++
++/*
++ * A native (--skip-prelink) kernel has no original corecrypto kext. Its source
++ * provider is linked but its entry point is never called, so g_crypto_funcs
++ * stays NULL and the first digest or kmem-RNG user crashes. Call the source
++ * provider's own start entry. fips_mode is unset (0), and fipspost_post()
++ * returns after recording the Mach header when FIPS is disabled, so the POST
++ * does not depend on a prelinked kext image.
 + */
-+static struct crypto_functions gtaxllte_crypto_functions;
++static kmod_info_t gtaxllte_crypto_kmod;
 +
 +static void
 +gtaxllte_register_source_crypto(void)
 +{
-+	gtaxllte_crypto_functions.ccdigest_init_fn = &ccdigest_init;
-+	gtaxllte_crypto_functions.ccdigest_update_fn = &ccdigest_update;
-+	gtaxllte_crypto_functions.ccdigest_fn = &ccdigest;
-+	gtaxllte_crypto_functions.ccmd5_di = &ccmd5_ltc_di;
-+	gtaxllte_crypto_functions.ccsha1_di = &ccsha1_ltc_di;
-+	gtaxllte_crypto_functions.ccsha256_di = &ccsha256_ltc_di;
-+	gtaxllte_crypto_functions.ccsha384_di = &ccsha384_ltc_di;
-+	gtaxllte_crypto_functions.ccsha512_di = &ccsha512_ltc_di;
-+	register_crypto_functions(&gtaxllte_crypto_functions);
-+}
-+
-+/*
-  *		Routine:		arm_init
-  *		Function:		Runs on the boot CPU, once, on entry from iBoot.
-  */
-@@ -519,6 +548,8 @@
++	gtaxllte_crypto_kmod.address = (vm_address_t)&_mh_execute_header;
++	corecrypto_kext_start(&gtaxllte_crypto_kmod, NULL);
+ }
+ 
+ /*
+@@ -518,6 +538,8 @@
+ #if __ARM_PAN_AVAILABLE__
  	__builtin_arm_wsr("pan", 1);
  #endif  /* __ARM_PAN_AVAILABLE__ */
- 
-+	gtaxllte_register_source_crypto();
 +
++	gtaxllte_register_source_crypto();
+ 
  	arm_vm_init(xmaxmem, args);
  
- 	if (debug_boot_arg) {

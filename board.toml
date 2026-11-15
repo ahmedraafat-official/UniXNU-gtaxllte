@@ -101,7 +101,7 @@ title = "UniXNU"
 # A long countdown while the payload path is under bring-up: the menu is the
 # only place that reports whether the FAT volume and config were found.
 timeout = 30
-kernel_args = ["-v", "serial=3", "debug=0x14e", "kt_fixed_zones=120", "armcpu-diagnostics=1", "-no_slto_panic"]
+kernel_args = ["-v", "serial=3", "debug=0x14e", "kt_fixed_zones=120", "fips_mode=4", "armcpu-diagnostics=1", "-no_slto_panic"]
 # Draw the XNU entry bars and a panic screen on the firmware framebuffer. The
 # tablet has no accessible UART, so this is the M2 log route.
 panic_screen = true
