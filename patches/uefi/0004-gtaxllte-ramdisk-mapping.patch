@@ -1,0 +1,15 @@
+diff --git a/Platforms/Samsung/gtaxlltePkg/Library/MemoryMapLib/MemoryMapLib.c b/Platforms/Samsung/gtaxlltePkg/Library/MemoryMapLib/MemoryMapLib.c
+index 40d1bbe..d9a2e25 100644
+--- a/Platforms/Samsung/gtaxlltePkg/Library/MemoryMapLib/MemoryMapLib.c
++++ b/Platforms/Samsung/gtaxlltePkg/Library/MemoryMapLib/MemoryMapLib.c
+@@ -6,6 +6,10 @@ gMemoryDescriptor[] = {
+   // Name, Address, Length, HobOption, ResourceType, ResourceAttribute, MemoryType, ArmAttribute
+ 
+   // DDR Regions
++  // S-Boot loads the BOOT ramdisk at 0x43000000, up to the 14 MiB S-Boot
++  // limit. Without this descriptor the UEFI MMU leaves the payload volume
++  // unmapped and UniXNURamDiskDxe faults on its first read.
++  {"Payload RAM disk",   0x43000000, 0x00E00000, AddMem, SYS_MEM, SYS_MEM_CAP, Reserv, WRITE_BACK},
+   {"UEFI FD",            0x43E00000, 0x00200000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
+   {"UEFI Stack",         0x44000000, 0x00040000, AddMem, SYS_MEM, SYS_MEM_CAP, BsData, WRITE_BACK},
+   {"DXE Heap",           0x44040000, 0x05400000, AddMem, SYS_MEM, SYS_MEM_CAP, Conv,   WRITE_BACK},

@@ -16,6 +16,9 @@ UEFI patches, each idempotent:
       saves the bootloader's x0 (the FDT pointer) in a HOB so
       UniXNURamDiskDxe can find /chosen/linux,initrd-start/end and publish
       the payload volume
+  0004-gtaxllte-ramdisk-mapping.patch
+      declares the 14 MiB ramdisk window at 0x43000000 in the UEFI memory
+      map, so the MMU maps the payload volume the driver reads
 
 The edk2 timer libraries are patched in place: S-Boot leaves CNTFRQ_EL0 at
 zero, and both the ARM arch timer and the generic timer counter must fall back
@@ -32,6 +35,7 @@ PATCHES = (
     ("0001-gtaxllte-unixnu-payload.patch", "Platforms/Samsung/gtaxlltePkg/gtaxllte.dsc", "UNIXNU_PAYLOAD"),
     ("0002-gtaxllte-bootshim-image-size.patch", "BootShim/BootShim.S", "_Payload - _Head + FD_SIZE"),
     ("0003-gtaxllte-entry-arg-hob.patch", "Silicon/Silicium/SiliciumPkg/Sec/Sec.c", "mEntryArgHobGuid"),
+    ("0004-gtaxllte-ramdisk-mapping.patch", "Platforms/Samsung/gtaxlltePkg/Library/MemoryMapLib/MemoryMapLib.c", "Payload RAM disk"),
 )
 
 TIMER_COUNTER_LIBS = (
@@ -122,32 +126,52 @@ def patch_edk2_timer(uefi: Path) -> int:
 
 
 def patch_edk2_exception(uefi: Path) -> int:
-    """Repeat the fault registers after the stack dump.
+    """Replace the long UEFI exception dump with one fault line.
 
-    The console scrolls the register block off the screen on a panic; the
-    summary after the dump stays visible, so a photographed panic gives the
-    ELR, ESR and FAR instead of only the stack.
+    The full X0-X30/V0-V31/stack dump scrolls the firmware's own log off the
+    panel, which is the only log this tablet has. The short report names the
+    faulting image and offset, then halts, so the last DARWINBOOT line before
+    the fault stays visible above it. The edk2 sources use CRLF.
     """
     path = uefi / "Mu_Basecore/UefiCpuPkg/Library/CpuExceptionHandlerLib/AArch64/CpuExceptionHandlerLib.c"
     if not path.is_file():
-        print("patch-gtaxllte-uefi: CpuExceptionHandlerLib.c not found; skipping exception summary", file=sys.stderr)
+        print("patch-gtaxllte-uefi: CpuExceptionHandlerLib.c not found; skipping exception report", file=sys.stderr)
         return 0
     data = path.read_bytes()
-    if b"FAULT SP" in data:
+    if b"FAULT %a" in data:
         return 0
-    marker = b"  // Attempt to print that we had a synchronous exception to ConOut."
+    marker = b"  mRecursiveException = TRUE;\r\n"
     if marker not in data:
-        print("patch-gtaxllte-uefi: exception summary marker not found", file=sys.stderr)
+        print("patch-gtaxllte-uefi: exception short-report marker not found", file=sys.stderr)
         return 1
-    summary = (
-        b"  DEBUG ((DEBUG_ERROR, \"\\nFAULT SP 0x%016lx ELR 0x%016lx ESR 0x%08lx FAR 0x%016lx\\n\",\n"
-        b"          SystemContext.SystemContextAArch64->SP,\n"
-        b"          SystemContext.SystemContextAArch64->ELR,\n"
-        b"          SystemContext.SystemContextAArch64->ESR,\n"
-        b"          SystemContext.SystemContextAArch64->FAR));\n\n"
-    )
-    path.write_bytes(data.replace(marker, summary + marker, 1))
-    print("patch-gtaxllte-uefi: added the exception fault summary")
+    lines = [
+        "  mRecursiveException = TRUE;",
+        "",
+        "  // Diagnostic: one fault line, then halt, so the boot log above survives.",
+        "  {",
+        "    UINTN  FaultBase;",
+        "    UINTN  FaultHeader;",
+        "    CHAR8  *FaultPdb;",
+        "",
+        "    FaultPdb = GetImageName (SystemContext.SystemContextAArch64->ELR, &FaultBase, &FaultHeader);",
+        "    if (FaultPdb != NULL) {",
+        "      DEBUG ((DEBUG_ERROR, \"\\nFAULT %a+0x%lx ELR=0x%lx FAR=0x%lx SP=0x%lx ESR=0x%lx\\n\",",
+        "              BaseName (FaultPdb), SystemContext.SystemContextAArch64->ELR - FaultBase,",
+        "              SystemContext.SystemContextAArch64->ELR, SystemContext.SystemContextAArch64->FAR,",
+        "              SystemContext.SystemContextAArch64->SP, SystemContext.SystemContextAArch64->ESR));",
+        "    } else {",
+        "      DEBUG ((DEBUG_ERROR, \"\\nFAULT ELR=0x%lx FAR=0x%lx SP=0x%lx ESR=0x%lx\\n\",",
+        "              SystemContext.SystemContextAArch64->ELR, SystemContext.SystemContextAArch64->FAR,",
+        "              SystemContext.SystemContextAArch64->SP, SystemContext.SystemContextAArch64->ESR));",
+        "    }",
+        "    ASSERT (FALSE);",
+        "    CpuDeadLoop ();",
+        "  }",
+        "",
+    ]
+    report = "\r\n".join(lines).encode()
+    path.write_bytes(data.replace(marker, report, 1))
+    print("patch-gtaxllte-uefi: replaced the exception dump with the fault report")
     return 0
 
 
