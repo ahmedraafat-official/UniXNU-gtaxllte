@@ -1,0 +1,28 @@
+--- a/bsd/kern/bsd_init.c	2026-11-15 16:57:51
++++ b/bsd/kern/bsd_init.c	2026-11-15 16:57:51
+@@ -481,6 +481,25 @@
+ void
+ bsd_init(void)
+ {
++	/*
++	 * gtaxllte E1: read the DWMSHC (eMMC) controller state S-Boot left
++	 * behind. bsd_init runs after PE_init_iokit, so a panic screen here
++	 * also proves OSMetaClass::postModLoad completed. Read-only; no card
++	 * command is issued yet.
++	 */
++	{
++		extern vm_offset_t ml_io_map(vm_offset_t, vm_size_t);
++		volatile uint32_t *mmc =
++		    (volatile uint32_t *)ml_io_map(0x13540000, 0x2000);
++		panic("gtaxllte dwmmc0 ver=%08x ctrl=%08x clkena=%08x "
++		    "clkdiv=%08x status=%08x rint=%08x fifoth=%08x "
++		    "bmod=%08x idsts=%08x cdetect=%08x",
++		    mmc[0x58 / 4], mmc[0x00 / 4], mmc[0x10 / 4],
++		    mmc[0x08 / 4], mmc[0x34 / 4], mmc[0x30 / 4],
++		    mmc[0x38 / 4], mmc[0x80 / 4], mmc[0x8c / 4],
++		    mmc[0x3c / 4]);
++	}
++
+ 	struct uthread *ut;
+ 	vnode_t init_rootvnode = NULLVP;
+ 	struct proc_ro_data kernproc_ro_data = {
