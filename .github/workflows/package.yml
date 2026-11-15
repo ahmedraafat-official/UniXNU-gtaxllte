@@ -55,6 +55,10 @@ jobs:
           kind = "soc"
           local = "../UniXNU-exynos7870-common"
           EOF
+      - name: native config audit
+        # Fail before the 40-minute build if the defconfig still assumes the
+        # prelinked kext collection that --skip-prelink never maps.
+        run: python3 device/scripts/check-native-config.py device/configs/gtaxllte_defconfig --board device/board.toml
       - name: patch UniXNU boot image
         run: |
           git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0001-bootimg-gtaxllte.patch"
