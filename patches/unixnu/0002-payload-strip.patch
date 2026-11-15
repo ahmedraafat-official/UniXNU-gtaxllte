@@ -1,15 +1,16 @@
 diff --git a/scripts/unixnu/payload.py b/scripts/unixnu/payload.py
-index 4dcbfdc..98a84b1 100644
+index 4dcbfdc..b373250 100644
 --- a/scripts/unixnu/payload.py
 +++ b/scripts/unixnu/payload.py
-@@ -182,6 +182,13 @@ def build(ctx, kernel=None):
+@@ -182,6 +182,14 @@ def build(ctx, kernel=None):
              boot_args = ' '.join([line, *spec.get('install', {}).get('confirm_args', [])])
              run(['python3', ctx.tree / 'scripts/seal-source-crypto-kernel.py', payloads / 'kernel.macho', '--kernel-args', boot_args],
                  cwd=ctx.tree, env=dict(os.environ, **kernel_step.version_env({}, ctx)), log_file=ctx.logs / 'payload-seal.log')
 +    if spec.get('strip'):
-+        strip = tool('llvm-strip', 'brew install llvm')
++        strip = tool('strip')
 +        stripped = payloads / 'kernel.macho.stripped'
-+        run([strip, '--strip-all', payloads / 'kernel.macho', '-o', stripped], capture=True)
++        shutil.copyfile(payloads / 'kernel.macho', stripped)
++        run([strip, '-x', '-S', stripped], capture=True)
 +        size = stripped.stat().st_size
 +        stripped.replace(payloads / 'kernel.macho')
 +        log(f'payload: stripped kernel is {size} bytes')
