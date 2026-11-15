@@ -57,6 +57,9 @@ jobs:
           EOF
       - name: patch UniXNU boot image
         run: git -C unixnu apply device/patches/unixnu/0001-bootimg-gtaxllte.patch
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
       - name: tools
         run: |
           brew install dtc llvm lld cmake ninja mtools unifdef acpica blacktop/tap/ipsw
@@ -84,7 +87,7 @@ jobs:
           UNIXNU_UNIQUE_CHIP_ID: ${{ secrets.UNIXNU_UNIQUE_CHIP_ID }}
           GITHUB_TOKEN: ${{ github.token }}
           IASL_PREFIX: /opt/homebrew/bin/
-        run: scripts/package.sh --os "${{ inputs.os }}" --uefi ../uefi-gtaxllte --edk2 ../uefi-gtaxllte/Mu_Basecore
+        run: scripts/package.sh --os "${{ inputs.os }}" --uefi ../uefi-gtaxllte --edk2 ../uefi-gtaxllte/Mu_Basecore --dtb ../uefi-gtaxllte/Resources/DTBs/gtaxllte.dtb
       - name: images
         uses: actions/upload-artifact@v4
         with:

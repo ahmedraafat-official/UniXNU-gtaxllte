@@ -3,5 +3,5 @@
 [[source]]
 name = "exynos7870"
 kind = "soc"
-git = "https://github.com/REPLACE-ME/UniXNU-exynos7870-common"
+git = "https://github.com/ahmedraafat-official/UniXNU-exynos7870-common"
 commit = "597db51e36dd545bbb88ab825c8869286c6f16cd"
