@@ -99,6 +99,14 @@ jobs:
           IASL_PREFIX: /opt/homebrew/bin/
           UNIXNU_DTB: ../uefi-gtaxllte/Resources/DTBs/gtaxllte.dtb
         run: scripts/package.sh --os "${{ inputs.os }}" --uefi ../uefi-gtaxllte --edk2 ../uefi-gtaxllte/Mu_Basecore --skip-prelink
+      - name: native prelink audit
+        # A --skip-prelink kernel does not map the target's kernelcache. Any
+        # external absolute symbol in prelink space is a boot-time fault
+        # (NativeAES/IOAESAccelerator was the first one); fail before flashing.
+        run: |
+          K=$(find unixnu/out/gtaxllte -path '*/kernel/kernel.macho' -print -quit)
+          test -n "$K"
+          python3 device/scripts/check-native-prelink-refs.py "$K"
       - name: images
         uses: actions/upload-artifact@v4
         with:
