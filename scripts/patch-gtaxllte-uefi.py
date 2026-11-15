@@ -12,6 +12,10 @@ UEFI patches, each idempotent:
   0002-gtaxllte-bootshim-image-size.patch
       makes the BootShim ARM64 image header describe the shim plus the
       appended firmware volume, which UniXNU's boot-image verifier requires
+  0003-gtaxllte-entry-arg-hob.patch
+      saves the bootloader's x0 (the FDT pointer) in a HOB so
+      UniXNURamDiskDxe can find /chosen/linux,initrd-start/end and publish
+      the payload volume
 
 The edk2 timer libraries are patched in place: S-Boot leaves CNTFRQ_EL0 at
 zero, and both the ARM arch timer and the generic timer counter must fall back
@@ -27,6 +31,7 @@ from pathlib import Path
 PATCHES = (
     ("0001-gtaxllte-unixnu-payload.patch", "Platforms/Samsung/gtaxlltePkg/gtaxllte.dsc", "UNIXNU_PAYLOAD"),
     ("0002-gtaxllte-bootshim-image-size.patch", "BootShim/BootShim.S", "_Payload - _Head + FD_SIZE"),
+    ("0003-gtaxllte-entry-arg-hob.patch", "Silicon/Silicium/SiliciumPkg/Sec/Sec.c", "mEntryArgHobGuid"),
 )
 
 TIMER_COUNTER_LIBS = (

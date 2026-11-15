@@ -1,0 +1,86 @@
+diff --git a/Silicon/Silicium/SiliciumPkg/Sec/AArch64/ModuleEntryPoint.S b/Silicon/Silicium/SiliciumPkg/Sec/AArch64/ModuleEntryPoint.S
+index 0c05ffa..6e3bf38 100644
+--- a/Silicon/Silicium/SiliciumPkg/Sec/AArch64/ModuleEntryPoint.S
++++ b/Silicon/Silicium/SiliciumPkg/Sec/AArch64/ModuleEntryPoint.S
+@@ -13,6 +13,10 @@
+ .set CTRL_SPAN_BIT, BIT23
+ 
+ ASM_FUNC (_ModuleEntryPoint)
++  // The bootloader passes the FDT pointer in x0. Keep it in a callee-saved
++  // register: the FD cache invalidate in SecEntry would discard a memory store.
++  mov   x19, x0
++
+   // Do Platform Specific Initialization
+   bl    ASM_PFX (PlatformAssemblyInitialize)
+ 
+@@ -50,14 +54,15 @@ ASM_PFX (MainEntryPoint):
+   cmp   x0, x2
+   b.lt  0b
+ 
+-  // Set Jump Location
+-  ldr   x0, =ASM_PFX (SecEntry)
++  // Set Jump Location; x0 carries the saved FDT pointer.
++  mov   x0, x19
++  ldr   x9, =ASM_PFX (SecEntry)
+ 
+   // Clear Frame Pointer
+   mov   x29, xzr
+ 
+   // Jump to C Code
+-  blr   x0
++  blr   x9
+ 
+   // Do Infinite Spin
+   b     .
+diff --git a/Silicon/Silicium/SiliciumPkg/Sec/Sec.c b/Silicon/Silicium/SiliciumPkg/Sec/Sec.c
+index 8d586b3..cc6ebd9 100644
+--- a/Silicon/Silicium/SiliciumPkg/Sec/Sec.c
++++ b/Silicon/Silicium/SiliciumPkg/Sec/Sec.c
+@@ -18,6 +18,16 @@
+ 
+ #include "Sec.h"
+ 
++//
++// Mu-Silicium stores the bootloader's x0 (the FDT pointer) in this HOB.
++// UniXNURamDiskDxe reads it to find /chosen/linux,initrd-start/end.
++//
++STATIC CONST EFI_GUID  mEntryArgHobGuid = {
++  0xDAEE82E6, 0x8090, 0x4E72, { 0xBF, 0xB9, 0x78, 0xC1, 0x3C, 0xD4, 0xE3, 0x59 }
++};
++
++STATIC UINT64  mEntryArg;
++
+ #ifndef MDEPKG_NDEBUG
+ STATIC
+ VOID
+@@ -121,6 +131,9 @@ SecMain (VOID)
+   // Build CPU HOB
+   BuildCpuHob (ArmGetPhysicalAddressBits (), PcdGet8 (PcdPrePiCpuIoSize));
+ 
++  // Publish the bootloader's entry argument for the DXE phase.
++  BuildGuidDataHob ((EFI_GUID *)&mEntryArgHobGuid, &mEntryArg, sizeof (mEntryArg));
++
+   // Set the Boot Mode
+   SetBootMode (BOOT_WITH_DEFAULT_SETTINGS);
+ 
+@@ -148,7 +161,9 @@ SecMain (VOID)
+ }
+ 
+ VOID
+-SecEntry (VOID)
++SecEntry (
++  IN UINT64  EntryArg
++  )
+ {
+   // Disable Data Cache
+   ArmDisableDataCache ();
+@@ -163,6 +178,9 @@ SecEntry (VOID)
+   InvalidateDataCacheRange ((VOID *)FixedPcdGet64 (PcdCPUCoresStackBase), FixedPcdGet32 (PcdCPUCorePrimaryStackSize));
+   InvalidateDataCacheRange ((VOID *)FixedPcdGet64 (PcdFdBaseAddress),     FixedPcdGet32 (PcdFdSize));
+ 
++  // Keep the bootloader's FDT pointer after the invalidate so it survives.
++  mEntryArg = EntryArg;
++
+   // Verify Exception Vector Table
+   ASSERT (((UINTN)SecVectorTable & ARM_VECTOR_TABLE_ALIGNMENT) == 0);
+ 
