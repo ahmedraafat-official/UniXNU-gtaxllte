@@ -78,7 +78,7 @@ volume = "GTAXLLTE"
 # The payload is UEFI-compressed because BOOT is small. 16 MiB held the
 # hero2lte kernel; the Tab A's BOOT size is confirmed in PHASE0.md before the
 # first flash. Raise this only after reading /dev/block/by-name/boot's size.
-size_mib = 16
+size_mib = 15
 compress = "uefi"
 loader = "firmware"
 title = "UniXNU"
