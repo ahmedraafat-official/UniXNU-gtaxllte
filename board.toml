@@ -18,10 +18,26 @@ description = "Samsung Galaxy Tab A 10.1 (2016) LTE (SM-T585)"
 kit = "gtaxllte"
 
 [components]
-include = ["ArmDTPlatform", "ArmCpu", "SoftwareAES", "XnuPrelink", "DarwinBoot"]
+# SoftwareAES is deliberately absent: it subclasses IOAESAccelerator, a class
+# that exists only in the target's prelinked kext collection. A native
+# (--skip-prelink) kernel never maps that collection, so NativeAES::superClass
+# and four of its method slots point into unmapped prelink space and the kernel
+# panics in OSMetaClass::postModLoad. Revisit when a prelinked payload fits BOOT
+# or the kext collection is mapped by the native kernel.
+include = ["ArmDTPlatform", "ArmCpu", "XnuPrelink", "DarwinBoot"]
 
 [kernel]
 defconfig = "gtaxllte_defconfig"
+# Overrides the arch profile's list to drop component:SoftwareAES and
+# build-software-aes-bindings.py (arrays replace, they do not merge).
+archives = [
+  "build-corecrypto-14.py",
+  "build-corecrypto-14.py --namespace",
+  "component:ArmDTPlatform",
+  "component:ArmCpu",
+  "build-mockfs-fixture.py",
+  "build-libpthread-kernel.py",
+]
 # The shared ARM64 fragment selects ArmCpu and the architectural timer. The
 # SoC fragment turns PAN off: the Cortex-A53s are ARMv8.0.
 config_fragments = ["arch:configs/common.config", "soc:configs/exynos7870.config", "os:configs/ipados.config"]
