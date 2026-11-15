@@ -9,4 +9,8 @@ CONFIG_XNU_CRYPTO_BOOTSTRAP="prelinked"
 # root mount after the kernel entry checkpoint.
 # CONFIG_XNU_NATIVE_UFS is not set
 # CONFIG_XNU_NATIVE_ADRENO is not set
+# The shared ARM64 fragment selects SoftwareAES, whose NativeAES subclasses
+# IOAESAccelerator from the prelinked kext collection. A --skip-prelink kernel
+# does not map that collection, so the class is excluded from the build.
+CONFIG_XNU_NATIVE_AES=n
 CONFIG_XNU_DT_PANIC_REGION=y
