@@ -18,7 +18,7 @@
 +		};
 +		extern struct gtaxllte_vc_info vinfo;
 +
-+		vinfo.v_baseaddr = (unsigned long)ml_io_map(0x67000000, 0x008ca000, VM_WIMG_IO);
++		vinfo.v_baseaddr = (unsigned long)ml_io_map_wcomb(0x67000000, 0x008ca000);
 +		vinfo.v_width    = 1200;
 +		vinfo.v_height   = 1920;
 +		vinfo.v_depth    = 32;
