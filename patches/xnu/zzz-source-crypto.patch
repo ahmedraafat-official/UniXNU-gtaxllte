@@ -1,5 +1,5 @@
---- a/osfmk/arm/arm_init.c	2026-11-15 18:49:13
-+++ b/osfmk/arm/arm_init.c	2026-11-15 18:49:13
+--- a/osfmk/arm/arm_init.c	2026-11-15 19:47:24
++++ b/osfmk/arm/arm_init.c	2026-11-15 19:47:24
 @@ -73,7 +73,10 @@
  #include <libkern/section_keywords.h>
  #include <san/kasan.h>
@@ -11,19 +11,15 @@
  #include <pexpert/pexpert.h>
  
  #include <console/serial_protos.h>
-@@ -334,6 +337,23 @@
- 	/* DATA TBI, if enabled, affects the number of VA bits that contain the signature */
- 	arm_set_kernel_tbi();
- #endif /* __arm64 */
-+}
-+
-+/*
+@@ -337,6 +340,22 @@
+ }
+ 
+ /*
 + * A native (--skip-prelink) kernel has no original corecrypto kext. Its source
 + * provider is linked but its entry point is never called, so g_crypto_funcs
 + * stays NULL and the first digest or kmem-RNG user crashes. Call the source
-+ * provider's own start entry. fips_mode is unset (0), and fipspost_post()
-+ * returns after recording the Mach header when FIPS is disabled, so the POST
-+ * does not depend on a prelinked kext image.
++ * provider's own start entry after the console is available. fips_mode=4
++ * disables the FIPS POST, which then only records the Mach header.
 + */
 +static kmod_info_t gtaxllte_crypto_kmod;
 +
@@ -32,15 +28,18 @@
 +{
 +	gtaxllte_crypto_kmod.address = (vm_address_t)&_mh_execute_header;
 +	corecrypto_kext_start(&gtaxllte_crypto_kmod, NULL);
- }
++}
++
++/*
+  *		Routine:		arm_init
+  *		Function:		Runs on the boot CPU, once, on entry from iBoot.
+  */
+@@ -578,6 +597,8 @@
  
- /*
-@@ -518,6 +538,8 @@
- #if __ARM_PAN_AVAILABLE__
- 	__builtin_arm_wsr("pan", 1);
- #endif  /* __ARM_PAN_AVAILABLE__ */
+ 	/* setup console output */
+ 	PE_init_printf(FALSE);
 +
 +	gtaxllte_register_source_crypto();
  
- 	arm_vm_init(xmaxmem, args);
- 
+ #if __arm64__
+ #if DEBUG
