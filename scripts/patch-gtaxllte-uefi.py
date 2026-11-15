@@ -121,6 +121,36 @@ def patch_edk2_timer(uefi: Path) -> int:
     return 0
 
 
+def patch_edk2_exception(uefi: Path) -> int:
+    """Repeat the fault registers after the stack dump.
+
+    The console scrolls the register block off the screen on a panic; the
+    summary after the dump stays visible, so a photographed panic gives the
+    ELR, ESR and FAR instead of only the stack.
+    """
+    path = uefi / "Mu_Basecore/UefiCpuPkg/Library/CpuExceptionHandlerLib/AArch64/CpuExceptionHandlerLib.c"
+    if not path.is_file():
+        print("patch-gtaxllte-uefi: CpuExceptionHandlerLib.c not found; skipping exception summary", file=sys.stderr)
+        return 0
+    data = path.read_bytes()
+    if b"FAULT SP" in data:
+        return 0
+    marker = b"  // Attempt to print that we had a synchronous exception to ConOut."
+    if marker not in data:
+        print("patch-gtaxllte-uefi: exception summary marker not found", file=sys.stderr)
+        return 1
+    summary = (
+        b"  DEBUG ((DEBUG_ERROR, \"\\nFAULT SP 0x%016lx ELR 0x%016lx ESR 0x%08lx FAR 0x%016lx\\n\",\n"
+        b"          SystemContext.SystemContextAArch64->SP,\n"
+        b"          SystemContext.SystemContextAArch64->ELR,\n"
+        b"          SystemContext.SystemContextAArch64->ESR,\n"
+        b"          SystemContext.SystemContextAArch64->FAR));\n\n"
+    )
+    path.write_bytes(data.replace(marker, summary + marker, 1))
+    print("patch-gtaxllte-uefi: added the exception fault summary")
+    return 0
+
+
 def main() -> int:
     uefi_env = os.environ.get("UNIXNU_UEFI")
     device_env = os.environ.get("UNIXNU_DEVICE")
@@ -146,7 +176,10 @@ def main() -> int:
         if result != 0:
             return result
 
-    return patch_edk2_timer(uefi)
+    status = patch_edk2_timer(uefi)
+    if status != 0:
+        return status
+    return patch_edk2_exception(uefi)
 
 
 if __name__ == "__main__":
