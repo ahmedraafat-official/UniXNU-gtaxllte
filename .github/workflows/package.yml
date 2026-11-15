@@ -60,6 +60,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - name: skip optional boot-progress patch
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          for series in Path("unixnu/profiles").rglob("patches/xnu/series"):
+              series.write_text("".join(line for line in series.read_text().splitlines(True) if "zzz-boot-progress" not in line))
+          PY
       - name: tools
         run: |
           brew install dtc llvm lld cmake ninja mtools unifdef acpica blacktop/tap/ipsw
