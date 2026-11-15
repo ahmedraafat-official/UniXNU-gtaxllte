@@ -9,3 +9,4 @@ CONFIG_XNU_CRYPTO_BOOTSTRAP="prelinked"
 # root mount after the kernel entry checkpoint.
 # CONFIG_XNU_NATIVE_UFS is not set
 # CONFIG_XNU_NATIVE_ADRENO is not set
+CONFIG_XNU_DT_PANIC_REGION=y
