@@ -14,6 +14,10 @@ on:
         type: choice
         options: ["17"]
         default: "17"
+      prelink:
+        description: "Build the prelinked kernel (the native images are the default)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -58,9 +62,20 @@ jobs:
           kind = "soc"
           local = "../UniXNU-exynos7870-common"
           EOF
+      - name: prelink patch set
+        # The prelinked kernel carries the real kext collection; the native
+        # crypto/trust-cache/UUID workarounds and the eMMC probe must not be
+        # applied to it. Keep only the early framebuffer/panic patch.
+        if: ${{ inputs.prelink }}
+        run: |
+          cat > device/patches/xnu/series <<'EOF'
+          # Prelinked kernel: native-only workarounds are omitted.
+          zzz-panic-framebuffer.patch
+          EOF
       - name: native config audit
         # Fail before the 40-minute build if the defconfig still assumes the
         # prelinked kext collection that --skip-prelink never maps.
+        if: ${{ !inputs.prelink }}
         run: python3 device/scripts/check-native-config.py device/configs/gtaxllte_defconfig --board device/board.toml
       - name: patch UniXNU boot image
         run: |
@@ -105,15 +120,32 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           IASL_PREFIX: /opt/homebrew/bin/
           UNIXNU_DTB: ../uefi-gtaxllte/Resources/DTBs/gtaxllte.dtb
-        run: scripts/package.sh --os "${{ inputs.os }}" --uefi ../uefi-gtaxllte --edk2 ../uefi-gtaxllte/Mu_Basecore --skip-prelink
+        run: |
+          if [ "${{ inputs.prelink }}" = "true" ]; then
+            scripts/package.sh --os "${{ inputs.os }}" --uefi ../uefi-gtaxllte --edk2 ../uefi-gtaxllte/Mu_Basecore
+          else
+            scripts/package.sh --os "${{ inputs.os }}" --uefi ../uefi-gtaxllte --edk2 ../uefi-gtaxllte/Mu_Basecore --skip-prelink
+          fi
       - name: native prelink audit
         # A --skip-prelink kernel does not map the target's kernelcache. Any
         # external absolute symbol in prelink space is a boot-time fault
         # (NativeAES/IOAESAccelerator was the first one); fail before flashing.
+        if: ${{ !inputs.prelink }}
         run: |
           K=$(find unixnu/out/gtaxllte -path '*/kernel/kernel.macho' -print -quit)
           test -n "$K"
           python3 device/scripts/check-native-prelink-refs.py "$K"
+      - name: prelinked kernel
+        # The 49 MiB kernel does not fit the 14 MiB ramdisk, so the package
+        # step stops at the payload. The kernel is built before that and is
+        # what we write to the HIDDEN partition.
+        if: ${{ always() && inputs.prelink }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: prelinked-kernel
+          retention-days: 1
+          if-no-files-found: warn
+          path: unixnu/out/gtaxllte/*/*/kernel/kernel.macho
       - name: images
         uses: actions/upload-artifact@v4
         with:
