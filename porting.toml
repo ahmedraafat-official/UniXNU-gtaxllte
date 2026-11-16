@@ -81,7 +81,7 @@ evidence = []
 id = "storage"
 status = "planned"
 components = []
-paths = ["drivers/ShengUfs", "scripts/*ufs*", "scripts/*storage*", "scripts/*userdata*", "scripts/*root*"]
+paths = ["drivers/ShengUfs", "scripts/*ufs*", "scripts/*storage*", "scripts/*userdata*", "scripts/*root*", "scripts/*dwmmc*", "package/NativeDwMmc.cpp"]
 inputs = ["Identify the storage and root hardware, resources and existing component interfaces for this board."]
 configuration = ["Record the board.toml fields, DTS properties and defconfig values used for storage and root."]
 procedure = ["Follow the storage and root stage in the porting guide and record the actual commands."]
@@ -92,6 +92,7 @@ findings = [
   "The same probe is also reachable from arm_init behind an emmc-probe=1 boot argument, so the eMMC state can be read even while the prelinked kernel still hangs inside IOKit.",
   "E2 passed on the tablet: with the 64-bit FIFO item width and a DTO check, LBA0 returns mbr=aa55 and LBA1 starts with EFI PART (20494645 54524150). The probe is now gated behind bsd-emmc-probe=1 so bsd_init can continue by default.",
   "NativeDwMmc is a read-only PIO IOBlockStorageDevice over the USERDATA window. It takes the FIFO item width from HCON, requires DTO, and links through a device build script, a kernel personality in KernelConfigTables.cpp and a build-script archive block. The dwmmc0 node is exported by the SoC DTS.",
+  "The first driver build stopped at -Werror because seven register constants were unused; only the constants the transport actually touches remain. The bootstrap kernel link warning about the mockfs vnodeop descriptor is the expected first-pass link without archives and does not fail the release.",
 ]
 completion = ["Host: register, clock, link and SMMU facts match the board inventory.", "Reads: SCSI capacity, GPT and known blocks are correct; OS/SystemOS windows stay within userdata.", "Root: the configured volume mounts and launchd starts. Persistence: writes survive reboot within the allocated Data region."]
 limits = ["Hardware inputs and implementation are pending for this example board."]

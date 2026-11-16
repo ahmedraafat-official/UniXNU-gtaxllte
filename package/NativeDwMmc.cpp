@@ -19,24 +19,17 @@
 #include <kern/task.h>
 
 namespace {
-constexpr uint32_t kCtrl = 0x00;
 constexpr uint32_t kPwrEn = 0x04;
-constexpr uint32_t kClkDiv = 0x08;
 constexpr uint32_t kClkEna = 0x10;
 constexpr uint32_t kTimeout = 0x14;
-constexpr uint32_t kCtype = 0x18;
 constexpr uint32_t kBlkSiz = 0x1c;
 constexpr uint32_t kByteCnt = 0x20;
 constexpr uint32_t kCmdArg = 0x28;
 constexpr uint32_t kCmd = 0x2c;
 constexpr uint32_t kRintSts = 0x44;
 constexpr uint32_t kStatus = 0x48;
-constexpr uint32_t kFifoTh = 0x4c;
-constexpr uint32_t kCdEtect = 0x50;
 constexpr uint32_t kVerId = 0x6c;
 constexpr uint32_t kHcon = 0x70;
-constexpr uint32_t kBmod = 0x80;
-constexpr uint32_t kIdSts = 0x90;
 constexpr uint32_t kFifoLegacy = 0x100;
 constexpr uint32_t kFifo240A = 0x200;
 
