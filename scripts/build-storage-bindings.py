@@ -32,7 +32,7 @@ parser.add_argument('--component', default='NativeDwMmc')
 parser.add_argument('--archive', default='libNativeDwMmc.a')
 parser.add_argument('--directory', type=Path, default=ROOT / 'build/native-dwmmc')
 parser.add_argument('--subset', action='store_true', default=True,
-                    help='bind only the symbols this object imports (the archive may be a second driver)')
+                    help='kept for command compatibility; this board has one storage driver')
 args = parser.parse_args()
 
 out = args.directory.resolve()
@@ -65,12 +65,17 @@ if missing:
     raise SystemExit('The recorded bindings do not cover: ' + ', '.join(sorted(missing)))
 bindings = {name: values[name] for name in imports}
 source = out / 'original-bindings.S'
-source.write_text(''.join(f'.weak_definition {name}\n.set {name}, {value:#x}\n'
+source.write_text(''.join(f'.globl {name}\n.set {name}, {value:#x}\n'
                           for name, value in sorted(bindings.items())))
 subprocess.run(['xcrun', 'clang', '-target', 'arm64-apple-ios17.0', '-Werror',
                 '-Wno-incompatible-sysroot', '-c', source, '-o', out / 'original-bindings.o'],
                check=True)
 subprocess.run(['xcrun', 'ar', 'rcs', archive, obj_path, out / 'original-bindings.o'], check=True)
+nm = subprocess.run(['xcrun', 'llvm-nm', '-g', str(archive)], capture_output=True, text=True, check=True)
+missing_after = [name for name in bindings if name not in nm.stdout]
+if missing_after:
+    raise SystemExit('binding symbols missing from the archive: ' + ', '.join(sorted(missing_after)))
+print('bound absolute symbols:', ', '.join(sorted(bindings)))
 (out / 'bindings.json').write_text(json.dumps(dict(
     component=args.component, archive=archive.name, provenance='scripts/data/native-storage-original-bindings.S',
     compiled_object_sha256=hashlib.sha256(data).hexdigest(),
