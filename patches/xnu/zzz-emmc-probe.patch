@@ -1,9 +1,9 @@
---- a/bsd/kern/bsd_init.c	2026-11-16 22:24:06
-+++ b/bsd/kern/bsd_init.c	2026-11-16 22:24:06
-@@ -478,9 +478,162 @@
-  * of the tro_ucred field so that the uthread structure can be
-  * used like any other.
-  */
+--- a/bsd/kern/bsd_init.c	2026-11-16 22:46:10
++++ b/bsd/kern/bsd_init.c	2026-11-16 22:46:10
+@@ -562,10 +562,162 @@
+ 	}
+ }
+ #endif
 +
 +/*
 + * gtaxllte E1/E2: Samsung MSHC (dwmmc0 @ 0x13540000) probe.
@@ -84,7 +84,7 @@
 +	gtaxllte_mmc_wr(base, GT_MSHCI_CMD,
 +	    17u | GT_MMC_CMD_RESP | GT_MMC_CMD_CRC | GT_MMC_CMD_DATA |
 +	    GT_MMC_CMD_WAIT | GT_MMC_CMD_HOLD | GT_MMC_CMD_START);
-+
+ 
 +	for (spin = 0; spin < 2000000 && done < 128; spin++) {
 +		rint = gtaxllte_mmc_rd(base, GT_MSHCI_RINTSTS);
 +		if (rint & GT_MMC_RINT_ERRORS) {
