@@ -89,6 +89,7 @@ findings = [
   "The eMMC is a Samsung MSHC at 0x13540000: VERID 0x6c, RINTSTS 0x44, STATUS 0x48, FIFO 0x100 or 0x200, 32-bit FIFO items, 8-bit bus; Mu-Silicium MshcDxe initializes it and leaves the card selected with 512-byte blocks.",
   "USERDATA is mmcblk0p23 at LBA 8,013,824 with 53,043,200 sectors; HIDDEN is mmcblk0p21 at LBA 7,880,704 with 122,880 sectors. The read-only bsd_init probe prints the controller state and reads LBA 0/1 through the PIO FIFO.",
   "No block driver or root mount exists yet; the first goal is the GPT signature (EFI PART) from the probe, then IOBlockStorageDevice publication.",
+  "The same probe is also reachable from arm_init behind an emmc-probe=1 boot argument, so the eMMC state can be read even while the prelinked kernel still hangs inside IOKit.",
 ]
 completion = ["Host: register, clock, link and SMMU facts match the board inventory.", "Reads: SCSI capacity, GPT and known blocks are correct; OS/SystemOS windows stay within userdata.", "Root: the configured volume mounts and launchd starts. Persistence: writes survive reboot within the allocated Data region."]
 limits = ["Hardware inputs and implementation are pending for this example board."]
@@ -197,6 +198,7 @@ findings = [
   "The prelink build overrides the device patch series: native-only workarounds are excluded, while the early framebuffer bars, the NULL-safe kmem wrapper, the crypto-free platform UUID, the read-only eMMC probe and the IOKit trace squares stay in.",
   "The package step always fails at strip on the 49 MiB prelinked Mach-O; the prelinked-kernel artifact is uploaded with if: always() and is the image written to HIDDEN.",
   "The payload step patches a copy of the prelinked kernel with the entry bars and the framebuffer panic screen before strip fails; that stage copy is uploaded with the raw kernel and is preferred when staging, because it renders panic arguments on the panel without a serial console.",
+  "The prelink series now also carries the boot-phase trace squares (startup/bootstrap) and the boot-argument-gated early eMMC probe, so one image answers both the IOKit hang and the storage question.",
 ]
 completion = ["Kernel and prelink succeed, payload contains all declared inputs, and the boot image matches the bootloader format and size limit."]
 limits = ["Hardware inputs and implementation are pending for this example board."]

@@ -1,0 +1,165 @@
+--- a/osfmk/arm/arm_init.c	2026-11-16 22:36:43
++++ b/osfmk/arm/arm_init.c	2026-11-16 22:36:43
+@@ -394,6 +394,153 @@
+ }
+ 
+ /*
++ * gtaxllte early eMMC probe, gated by the "emmc-probe=1" boot argument.
++ *
++ * The full E1/E2 record can then be collected before IOKit, so a hang in
++ * PE_init_iokit does not hide the storage controller state. Samsung MSHC
++ * register map; see Mu-Silicium MshcDxe/MshcHost.h.
++ */
++#define GT_MSHCI_PWREN     0x04u
++#define GT_MSHCI_CLKDIV    0x08u
++#define GT_MSHCI_CLKENA    0x10u
++#define GT_MSHCI_TMOUT     0x14u
++#define GT_MSHCI_CTYPE     0x18u
++#define GT_MSHCI_BLKSIZ    0x1cu
++#define GT_MSHCI_BYTCNT    0x20u
++#define GT_MSHCI_CMDARG    0x28u
++#define GT_MSHCI_CMD       0x2cu
++#define GT_MSHCI_RINTSTS   0x44u
++#define GT_MSHCI_STATUS    0x48u
++#define GT_MSHCI_FIFOTH    0x4cu
++#define GT_MSHCI_CDETECT   0x50u
++#define GT_MSHCI_VERID     0x6cu
++#define GT_MSHCI_HCON      0x70u
++#define GT_MSHCI_BMOD      0x80u
++#define GT_MSHCI_IDSTS     0x90u
++#define GT_MSHCI_FIFO_OLD  0x100u
++#define GT_MSHCI_FIFO_240A 0x200u
++
++#define GT_MMC_CMD_RESP     (1u << 6)
++#define GT_MMC_CMD_CRC      (1u << 8)
++#define GT_MMC_CMD_DATA     (1u << 9)
++#define GT_MMC_CMD_WAIT     (1u << 13)
++#define GT_MMC_CMD_HOLD     (1u << 29)
++#define GT_MMC_CMD_START    (1u << 31)
++#define GT_MMC_RINT_RXDR    (1u << 5)
++#define GT_MMC_RINT_DTO     (1u << 3)
++#define GT_MMC_STATUS_BUSY  (1u << 9)
++#define GT_MMC_RINT_ERRORS  ((1u << 1) | (1u << 6) | (1u << 7) | \
++                             (1u << 8) | (1u << 9) | (1u << 10) | \
++                             (1u << 11) | (1u << 12) | (1u << 13) | \
++                             (1u << 15))
++
++static unsigned int
++gtaxllte_emmc_rd(unsigned long base, unsigned int off)
++{
++	return *(volatile unsigned int *)(base + off);
++}
++
++static void
++gtaxllte_emmc_wr(unsigned long base, unsigned int off, unsigned int value)
++{
++	*(volatile unsigned int *)(base + off) = value;
++}
++
++static int
++gtaxllte_emmc_read_block(unsigned long base, unsigned int fifo,
++    unsigned int lba, unsigned int *words, unsigned int *rint_out)
++{
++	unsigned int spin, rint = 0, status, count, done = 0;
++
++	for (spin = 0; spin < 200000; spin++) {
++		if (!(gtaxllte_emmc_rd(base, GT_MSHCI_STATUS) &
++		    GT_MMC_STATUS_BUSY)) {
++			break;
++		}
++	}
++	gtaxllte_emmc_wr(base, GT_MSHCI_RINTSTS, 0xffffffffu);
++	gtaxllte_emmc_wr(base, GT_MSHCI_TMOUT, 0xffffffffu);
++	gtaxllte_emmc_wr(base, GT_MSHCI_BLKSIZ, 512);
++	gtaxllte_emmc_wr(base, GT_MSHCI_BYTCNT, 512);
++	gtaxllte_emmc_wr(base, GT_MSHCI_CMDARG, lba);
++	gtaxllte_emmc_wr(base, GT_MSHCI_CMD,
++	    17u | GT_MMC_CMD_RESP | GT_MMC_CMD_CRC | GT_MMC_CMD_DATA |
++	    GT_MMC_CMD_WAIT | GT_MMC_CMD_HOLD | GT_MMC_CMD_START);
++	for (spin = 0; spin < 2000000 && done < 128; spin++) {
++		rint = gtaxllte_emmc_rd(base, GT_MSHCI_RINTSTS);
++		if (rint & GT_MMC_RINT_ERRORS) {
++			break;
++		}
++		status = gtaxllte_emmc_rd(base, GT_MSHCI_STATUS);
++		count = (status >> 17) & 0x1fffu;
++		while (count != 0 && done < 128) {
++			words[done++] = gtaxllte_emmc_rd(base, fifo);
++			count--;
++		}
++		if (count != 0) {
++			gtaxllte_emmc_wr(base, GT_MSHCI_RINTSTS,
++			    GT_MMC_RINT_RXDR);
++		}
++		if ((rint & GT_MMC_RINT_DTO) && done == 128) {
++			break;
++		}
++	}
++	*rint_out = rint;
++	return (done == 128 && !(rint & GT_MMC_RINT_ERRORS)) ? 0 : -1;
++}
++
++static void
++gtaxllte_emmc_probe(void)
++{
++	unsigned int enabled = 0;
++	extern vm_offset_t ml_io_map(vm_offset_t, vm_size_t);
++
++	if (!PE_parse_boot_argn("emmc-probe", &enabled, sizeof(enabled)) ||
++	    enabled == 0) {
++		return;
++	}
++
++	{
++		unsigned long base = ml_io_map(0x13540000, 0x2000);
++		unsigned int verid = gtaxllte_emmc_rd(base, GT_MSHCI_VERID);
++		unsigned int hcon  = gtaxllte_emmc_rd(base, GT_MSHCI_HCON);
++		unsigned int pwr   = gtaxllte_emmc_rd(base, GT_MSHCI_PWREN);
++		unsigned int clken = gtaxllte_emmc_rd(base, GT_MSHCI_CLKENA);
++		unsigned int clkdiv= gtaxllte_emmc_rd(base, GT_MSHCI_CLKDIV);
++		unsigned int ctype = gtaxllte_emmc_rd(base, GT_MSHCI_CTYPE);
++		unsigned int status= gtaxllte_emmc_rd(base, GT_MSHCI_STATUS);
++		unsigned int rint  = gtaxllte_emmc_rd(base, GT_MSHCI_RINTSTS);
++		unsigned int fifoth= gtaxllte_emmc_rd(base, GT_MSHCI_FIFOTH);
++		unsigned int bmod  = gtaxllte_emmc_rd(base, GT_MSHCI_BMOD);
++		unsigned int idsts = gtaxllte_emmc_rd(base, GT_MSHCI_IDSTS);
++		unsigned int cdet  = gtaxllte_emmc_rd(base, GT_MSHCI_CDETECT);
++		unsigned int fifo  = ((verid & 0xffffu) < 0x240au) ?
++		    GT_MSHCI_FIFO_OLD : GT_MSHCI_FIFO_240A;
++		unsigned int sector[128];
++		unsigned int r0 = 0, r1 = 0, mbr = 0, gpt0 = 0, gpt1 = 0;
++		int s0 = -1, s1 = -1;
++
++		if (verid != 0xffffffffu && (pwr & 1u) != 0 &&
++		    (clken & 1u) != 0) {
++			s0 = gtaxllte_emmc_read_block(base, fifo, 0,
++			    sector, &r0);
++			mbr = sector[127] >> 16;
++			s1 = gtaxllte_emmc_read_block(base, fifo, 1,
++			    sector, &r1);
++			gpt0 = sector[0];
++			gpt1 = sector[1];
++		}
++		panic("gtaxllte early dwmmc0 ver=%08x hcon=%08x pwr=%08x "
++		    "clkena=%08x clkdiv=%08x ctype=%08x status=%08x "
++		    "rint=%08x fifoth=%08x bmod=%08x idsts=%08x cdet=%08x "
++		    "| lba0=%d/%08x mbr=%04x lba1=%d/%08x gpt=%08x %08x",
++		    verid, hcon, pwr, clken, clkdiv, ctype, status,
++		    rint, fifoth, bmod, idsts, cdet,
++		    s0, r0, mbr, s1, r1, gpt0, gpt1);
++	}
++}
++
++/*
+  *		Routine:		arm_init
+  *		Function:		Runs on the boot CPU, once, on entry from iBoot.
+  */
+@@ -584,6 +731,8 @@
+ 	vinfo.v_depth    = 32;
+ 	vinfo.v_rowbytes = 1200 * 4;
+ 	gtaxllte_fb_bar(400, 0x0000FF00);   /* arm_vm_init returned: green */
++	gtaxllte_fb_mark(33, 0x00FFFFFF);   /* early probe gate evaluated */
++	gtaxllte_emmc_probe();              /* emmc-probe=1: panic with E1/E2 */
+ 
+ 	if (debug_boot_arg) {
+ 		patch_low_glo();

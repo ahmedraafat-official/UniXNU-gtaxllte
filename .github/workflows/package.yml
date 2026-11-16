@@ -82,6 +82,8 @@ jobs:
           zzz-iokit-bar.patch
           zzz-emmc-probe.patch
           zzz-iokit-trace.patch
+          zzz-boot-trace.patch
+          zzz-emmc-early.patch
           EOF
       - name: native config audit
         # Fail before the 40-minute build if the defconfig still assumes the
