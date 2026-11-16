@@ -1,6 +1,6 @@
---- a/bsd/kern/bsd_init.c	2026-11-16 22:46:10
-+++ b/bsd/kern/bsd_init.c	2026-11-16 22:46:10
-@@ -562,10 +562,162 @@
+--- a/bsd/kern/bsd_init.c	2026-11-16 23:43:53
++++ b/bsd/kern/bsd_init.c	2026-11-16 23:43:53
+@@ -562,10 +562,174 @@
  	}
  }
  #endif
@@ -67,8 +67,10 @@
 +gtaxllte_mmc_read_block(unsigned long base, unsigned int fifo,
 +    unsigned int lba, unsigned int *words, unsigned int *rint_out)
 +{
-+	unsigned int spin, rint = 0, status, count, done = 0;
++	unsigned int spin, rint = 0, status, count, done = 0, itemWords;
 +
++	/* HCON[9:7]: 2 is a 64-bit FIFO; each item is two 32-bit words. */
++	itemWords = (((gtaxllte_mmc_rd(base, GT_MSHCI_HCON) >> 7) & 7) == 2) ? 2 : 1;
 +	for (spin = 0; spin < 200000; spin++) {
 +		if (!(gtaxllte_mmc_rd(base, GT_MSHCI_STATUS) &
 +		    GT_MMC_STATUS_BUSY)) {
@@ -84,7 +86,7 @@
 +	gtaxllte_mmc_wr(base, GT_MSHCI_CMD,
 +	    17u | GT_MMC_CMD_RESP | GT_MMC_CMD_CRC | GT_MMC_CMD_DATA |
 +	    GT_MMC_CMD_WAIT | GT_MMC_CMD_HOLD | GT_MMC_CMD_START);
- 
++
 +	for (spin = 0; spin < 2000000 && done < 128; spin++) {
 +		rint = gtaxllte_mmc_rd(base, GT_MSHCI_RINTSTS);
 +		if (rint & GT_MMC_RINT_ERRORS) {
@@ -93,21 +95,31 @@
 +		status = gtaxllte_mmc_rd(base, GT_MSHCI_STATUS);
 +		count = (status >> 17) & 0x1fffu;
 +		while (count != 0 && done < 128) {
-+			words[done++] = gtaxllte_mmc_rd(base, fifo);
++			for (unsigned int w = 0; w < itemWords && done < 128; w++) {
++				words[done++] = gtaxllte_mmc_rd(base,
++				    fifo + w * 4);
++			}
 +			count--;
 +		}
 +		if (count != 0) {
 +			gtaxllte_mmc_wr(base, GT_MSHCI_RINTSTS,
 +			    GT_MMC_RINT_RXDR);
 +		}
-+		if ((rint & GT_MMC_RINT_DTO) && done == 128) {
-+			break;
++	}
++	/* Require the controller to report the end of the data phase. */
++	if (done == 128) {
++		for (spin = 0; spin < 200000; spin++) {
++			rint = gtaxllte_mmc_rd(base, GT_MSHCI_RINTSTS);
++			if (rint & (GT_MMC_RINT_DTO | GT_MMC_RINT_ERRORS)) {
++				break;
++			}
 +		}
 +	}
 +	*rint_out = rint;
-+	return (done == 128 && !(rint & GT_MMC_RINT_ERRORS)) ? 0 : -1;
++	return (done == 128 && (rint & GT_MMC_RINT_DTO) &&
++	    !(rint & GT_MMC_RINT_ERRORS)) ? 0 : -1;
 +}
-+
+ 
  void
  bsd_init(void)
  {

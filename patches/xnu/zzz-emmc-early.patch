@@ -1,6 +1,6 @@
---- a/osfmk/arm/arm_init.c	2026-11-16 22:36:43
-+++ b/osfmk/arm/arm_init.c	2026-11-16 22:36:43
-@@ -394,6 +394,153 @@
+--- a/osfmk/arm/arm_init.c	2026-11-16 23:43:53
++++ b/osfmk/arm/arm_init.c	2026-11-16 23:43:53
+@@ -394,6 +394,165 @@
  }
  
  /*
@@ -60,8 +60,10 @@
 +gtaxllte_emmc_read_block(unsigned long base, unsigned int fifo,
 +    unsigned int lba, unsigned int *words, unsigned int *rint_out)
 +{
-+	unsigned int spin, rint = 0, status, count, done = 0;
++	unsigned int spin, rint = 0, status, count, done = 0, itemWords;
 +
++	/* HCON[9:7]: 2 is a 64-bit FIFO; each item is two 32-bit words. */
++	itemWords = (((gtaxllte_emmc_rd(base, GT_MSHCI_HCON) >> 7) & 7) == 2) ? 2 : 1;
 +	for (spin = 0; spin < 200000; spin++) {
 +		if (!(gtaxllte_emmc_rd(base, GT_MSHCI_STATUS) &
 +		    GT_MMC_STATUS_BUSY)) {
@@ -84,19 +86,29 @@
 +		status = gtaxllte_emmc_rd(base, GT_MSHCI_STATUS);
 +		count = (status >> 17) & 0x1fffu;
 +		while (count != 0 && done < 128) {
-+			words[done++] = gtaxllte_emmc_rd(base, fifo);
++			for (unsigned int w = 0; w < itemWords && done < 128; w++) {
++				words[done++] = gtaxllte_emmc_rd(base,
++				    fifo + w * 4);
++			}
 +			count--;
 +		}
 +		if (count != 0) {
 +			gtaxllte_emmc_wr(base, GT_MSHCI_RINTSTS,
 +			    GT_MMC_RINT_RXDR);
 +		}
-+		if ((rint & GT_MMC_RINT_DTO) && done == 128) {
-+			break;
++	}
++	/* Require the controller to report the end of the data phase. */
++	if (done == 128) {
++		for (spin = 0; spin < 200000; spin++) {
++			rint = gtaxllte_emmc_rd(base, GT_MSHCI_RINTSTS);
++			if (rint & (GT_MMC_RINT_DTO | GT_MMC_RINT_ERRORS)) {
++				break;
++			}
 +		}
 +	}
 +	*rint_out = rint;
-+	return (done == 128 && !(rint & GT_MMC_RINT_ERRORS)) ? 0 : -1;
++	return (done == 128 && (rint & GT_MMC_RINT_DTO) &&
++	    !(rint & GT_MMC_RINT_ERRORS)) ? 0 : -1;
 +}
 +
 +static void
@@ -154,7 +166,7 @@
   *		Routine:		arm_init
   *		Function:		Runs on the boot CPU, once, on entry from iBoot.
   */
-@@ -584,6 +731,8 @@
+@@ -594,6 +753,8 @@
  	vinfo.v_depth    = 32;
  	vinfo.v_rowbytes = 1200 * 4;
  	gtaxllte_fb_bar(400, 0x0000FF00);   /* arm_vm_init returned: green */

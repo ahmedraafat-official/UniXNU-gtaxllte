@@ -202,6 +202,7 @@ findings = [
   "The payload builder now generates the ADT sidecar before the strip step, so a failed prelinked package still yields a fresh kernel.macho.adt next to the patched kernel; staging the ADT is opt-in until it is compared with the working one.",
   "Device XNU patches are generated against the post-arch-series source, not the pristine XNU tree: offline-component-load-probes.patch inserts its probes between the bsd_init comment and the function, so a context built from the pristine file no longer applies.",
   "The boot-phase squares showed the prelinked kernel completing PE_lockdown_iokit and then stopping before bsd_init. The only blocking call between them is kperf_init_early()->ml_wait_max_cpus(); the native ArmCpu path does not call ml_set_max_cpus() on this board, so the boot now marks the maximum CPU count set explicitly before the VM restrictions and kperf.",
+  "The first eMMC read completed with zero data: HCON[9:7]=2 means a 64-bit FIFO, and the probe consumed one 32-bit word per FIFO item. The probes now take the item width from HCON, read both words per item, and require RINTSTS DTO before reporting success.",
 ]
 completion = ["Kernel and prelink succeed, payload contains all declared inputs, and the boot image matches the bootloader format and size limit."]
 limits = ["Hardware inputs and implementation are pending for this example board."]
