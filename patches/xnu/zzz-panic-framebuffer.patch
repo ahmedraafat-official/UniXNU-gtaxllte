@@ -1,8 +1,10 @@
---- a/osfmk/arm/arm_init.c
-+++ b/osfmk/arm/arm_init.c
-@@ -522,5 +522,27 @@
- 	arm_vm_init(xmaxmem, args);
+--- a/osfmk/arm/arm_init.c	2026-11-16 20:34:17
++++ b/osfmk/arm/arm_init.c	2026-11-16 20:34:18
+@@ -520,7 +520,40 @@
+ #endif  /* __ARM_PAN_AVAILABLE__ */
  
+ 	arm_vm_init(xmaxmem, args);
++
 +	/*
 +	 * The panic screen runs before any display driver exists. Map the panel's
 +	 * scanout buffer now and point vinfo at it, so an early root-mount panic
@@ -17,12 +19,23 @@
 +			unsigned long v_baseaddr;
 +		};
 +		extern struct gtaxllte_vc_info vinfo;
-+
+ 
 +		vinfo.v_baseaddr = (unsigned long)ml_io_map_wcomb(0x67000000, 0x008ca000);
 +		vinfo.v_width    = 1200;
 +		vinfo.v_height   = 1920;
 +		vinfo.v_depth    = 32;
 +		vinfo.v_rowbytes = 1200 * 4;
++
++		/* Direct marker: this runs only if arm_vm_init() returned. */
++		{
++			volatile unsigned int *fb = (volatile unsigned int *)vinfo.v_baseaddr;
++			unsigned int row = vinfo.v_rowbytes / 4;
++			for (unsigned int y = 0; y < 32; y++) {
++				for (unsigned int x = 0; x < vinfo.v_width; x++) {
++					fb[(400 + y) * row + x] = 0x0000FF00;
++				}
++			}
++		}
 +	}
 +
  	if (debug_boot_arg) {
