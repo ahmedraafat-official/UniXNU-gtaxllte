@@ -156,7 +156,9 @@ jobs:
           name: prelinked-kernel
           retention-days: 1
           if-no-files-found: warn
-          path: unixnu/out/gtaxllte/*/*/kernel/kernel.macho
+          path: |
+            unixnu/out/gtaxllte/*/*/kernel/kernel.macho
+            unixnu/out/gtaxllte/*/*/payload/stage/EFI/UniXNU/Payloads/kernel.macho
       - name: images
         uses: actions/upload-artifact@v4
         with:

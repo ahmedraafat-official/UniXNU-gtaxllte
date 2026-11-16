@@ -1,0 +1,123 @@
+--- a/libsa/bootstrap.cpp	2026-11-16 22:29:46
++++ b/libsa/bootstrap.cpp	2026-11-16 22:29:47
+@@ -179,11 +179,15 @@
+ 
+ /*********************************************************************
+ *********************************************************************/
++extern "C" void gtaxllte_fb_mark(unsigned int, unsigned int);
++
+ void
+ KLDBootstrap::readStartupExtensions(void)
+ {
+ 	kernel_section_t * prelinkInfoSect = NULL; // do not free
+ 
++	gtaxllte_fb_mark(16, 0x00FF8000);   /* KLDBootstrap::readStartupExtensions entry */
++
+ 	OSKextLog(/* kext */ NULL,
+ 	    kOSKextLogProgressLevel |
+ 	    kOSKextLogGeneralFlag | kOSKextLogDirectoryScanFlag |
+@@ -207,6 +211,7 @@
+ 	} else {
+ 		readBooterExtensions();
+ 	}
++	gtaxllte_fb_mark(17, 0x00FF8000);   /* primary prelinked kexts read */
+ 
+ 	kernel_mach_header_t *akc_mh;
+ 	akc_mh = (kernel_mach_header_t*)PE_get_kc_header(KCKindAuxiliary);
+@@ -215,9 +220,13 @@
+ 	}
+ 
+ 	loadKernelComponentKexts();
++	gtaxllte_fb_mark(18, 0x00FF8000);   /* kernel component kexts loaded */
+ 	loadKernelExternalComponents();
++	gtaxllte_fb_mark(19, 0x00FF8000);   /* external component kexts loaded */
+ 	readBuiltinPersonalities();
++	gtaxllte_fb_mark(20, 0x00FF8000);   /* builtin personalities read */
+ 	OSKext::sendAllKextPersonalitiesToCatalog(true);
++	gtaxllte_fb_mark(21, 0x00FF8000);   /* personalities sent to the catalog */
+ 
+ 	return;
+ }
+--- a/osfmk/kern/startup.c	2026-11-16 22:29:46
++++ b/osfmk/kern/startup.c	2026-11-16 22:29:47
+@@ -692,8 +692,10 @@
+ 	vm_kernel_addrhash_salt_ext = early_random();
+ 
+ #ifdef  IOKIT
++	extern void gtaxllte_fb_mark(unsigned int, unsigned int);
+ 	kernel_bootstrap_log("PE_init_iokit");
+ 	PE_init_iokit();
++	gtaxllte_fb_mark(22, 0x00808080);   /* PE_init_iokit returned */
+ #endif
+ 
+ 	assert(ml_get_interrupts_enabled() == FALSE);
+@@ -703,12 +705,14 @@
+ 	 * interrupts or preemption enabled may begin enforcement.
+ 	 */
+ 	kernel_startup_initialize_upto(STARTUP_SUB_EARLY_BOOT);
++	gtaxllte_fb_mark(23, 0x00808080);   /* STARTUP_SUB_EARLY_BOOT done */
+ 
+ #if SCHED_HYGIENE_DEBUG
+ 	// Reset interrupts masked timeout before we enable interrupts
+ 	ml_spin_debug_clear_self();
+ #endif
+ 	(void) spllo();         /* Allow interruptions */
++	gtaxllte_fb_mark(24, 0x00808080);   /* interrupts enabled */
+ 
+ 	/*
+ 	 * This will start displaying progress to the user, start as early as possible
+@@ -720,10 +724,12 @@
+ 	 */
+ 	vm_commpage_init();
+ 	vm_commpage_text_init();
++	gtaxllte_fb_mark(25, 0x00808080);   /* commpage initialized */
+ 
+ #if CONFIG_MACF
+ 	kernel_bootstrap_log("mac_policy_initmach");
+ 	mac_policy_initmach();
++	gtaxllte_fb_mark(26, 0x00808080);   /* mac_policy_initmach done */
+ #if CONFIG_VNGUARD
+ 	kernel_bootstrap_log("vnguard_policy_init");
+ 	vnguard_policy_init();
+@@ -762,6 +768,7 @@
+ #endif
+ 
+ 	kernel_startup_initialize_upto(STARTUP_SUB_LOCKDOWN);
++	gtaxllte_fb_mark(27, 0x00808080);   /* STARTUP_SUB_LOCKDOWN done */
+ 
+ 	/*
+ 	 * Get rid of segments used to bootstrap kext loading. This removes
+@@ -771,6 +778,7 @@
+ 	 */
+ 	kernel_bootstrap_log("OSKextRemoveKextBootstrap");
+ 	OSKextRemoveKextBootstrap();
++	gtaxllte_fb_mark(28, 0x00808080);   /* kext bootstrap removed */
+ 
+ #if SOCKETS
+ 	/*
+@@ -782,6 +790,7 @@
+ 	/* No changes to kernel text and rodata beyond this point. */
+ 	kernel_bootstrap_log("machine_lockdown");
+ 	machine_lockdown();
++	gtaxllte_fb_mark(29, 0x00808080);   /* machine lockdown done */
+ 
+ #ifdef CONFIG_XNUPOST
+ 	kern_return_t result = kernel_list_tests();
+@@ -794,7 +803,9 @@
+ 
+ #ifdef  IOKIT
+ 	kernel_bootstrap_log("PE_lockdown_iokit");
++	gtaxllte_fb_mark(30, 0x00808080);   /* PE_lockdown_iokit entry */
+ 	PE_lockdown_iokit();
++	gtaxllte_fb_mark(31, 0x00808080);   /* IOKit matching started */
+ #endif
+ 	/*
+ 	 * max_cpus must be nailed down by the time PE_lockdown_iokit() finishes,
+@@ -811,6 +822,7 @@
+ 	 *	Start the user bootstrap.
+ 	 */
+ #ifdef  MACH_BSD
++	gtaxllte_fb_mark(32, 0x0080FF00);   /* bsd_init entry */
+ 	bsd_init();
+ #endif
+ 

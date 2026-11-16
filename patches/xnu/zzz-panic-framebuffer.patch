@@ -1,5 +1,5 @@
---- a/osfmk/arm/arm_init.c	2026-11-16 22:17:48
-+++ b/osfmk/arm/arm_init.c	2026-11-16 22:17:48
+--- a/osfmk/arm/arm_init.c	2026-11-16 22:29:46
++++ b/osfmk/arm/arm_init.c	2026-11-16 22:29:46
 @@ -337,6 +337,63 @@
  }
  
@@ -29,8 +29,8 @@
 +	}
 +	fb = (volatile unsigned int *)vinfo.v_baseaddr;
 +	row = vinfo.v_rowbytes / 4;
-+	x = 40 + index * 64;
-+	y = 820;
++	x = 40 + (index % 18) * 64;
++	y = 820 + (index / 18) * 64;
 +	if (x + 48 > vinfo.v_width || y + 48 > vinfo.v_height) {
 +		return;
 +	}

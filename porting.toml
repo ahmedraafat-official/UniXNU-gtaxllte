@@ -196,6 +196,7 @@ procedure = ["Follow the image assembly stage in the porting guide and record th
 findings = [
   "The prelink build overrides the device patch series: native-only workarounds are excluded, while the early framebuffer bars, the NULL-safe kmem wrapper, the crypto-free platform UUID, the read-only eMMC probe and the IOKit trace squares stay in.",
   "The package step always fails at strip on the 49 MiB prelinked Mach-O; the prelinked-kernel artifact is uploaded with if: always() and is the image written to HIDDEN.",
+  "The payload step patches a copy of the prelinked kernel with the entry bars and the framebuffer panic screen before strip fails; that stage copy is uploaded with the raw kernel and is preferred when staging, because it renders panic arguments on the panel without a serial console.",
 ]
 completion = ["Kernel and prelink succeed, payload contains all declared inputs, and the boot image matches the bootloader format and size limit."]
 limits = ["Hardware inputs and implementation are pending for this example board."]
