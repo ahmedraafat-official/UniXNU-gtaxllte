@@ -3,4 +3,5 @@ zzz-kmem-no-crypto.patch
 zzz-native-uuid.patch
 zzz-trustcache-stub.patch
 zzz-panic-framebuffer.patch
+zzz-iokit-bar.patch
 zzz-emmc-probe.patch

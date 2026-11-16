@@ -1,9 +1,12 @@
---- a/bsd/kern/bsd_init.c	2026-11-15 16:57:51
-+++ b/bsd/kern/bsd_init.c	2026-11-15 16:57:51
-@@ -481,6 +481,25 @@
+--- a/bsd/kern/bsd_init.c	2026-11-16 21:20:52
++++ b/bsd/kern/bsd_init.c	2026-11-16 21:20:52
+@@ -481,6 +481,28 @@
  void
  bsd_init(void)
  {
++	extern void gtaxllte_fb_bar(unsigned int, unsigned int);
++	gtaxllte_fb_bar(700, 0x00FFFF00);   /* bsd_init entered: yellow */
++
 +	/*
 +	 * gtaxllte E1: read the DWMSHC (eMMC) controller state S-Boot left
 +	 * behind. bsd_init runs after PE_init_iokit, so a panic screen here

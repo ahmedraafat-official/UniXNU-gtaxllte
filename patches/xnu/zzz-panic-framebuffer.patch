@@ -1,43 +1,64 @@
---- a/osfmk/arm/arm_init.c	2026-11-16 20:34:17
-+++ b/osfmk/arm/arm_init.c	2026-11-16 20:34:18
-@@ -520,7 +520,40 @@
- #endif  /* __ARM_PAN_AVAILABLE__ */
+--- a/osfmk/arm/arm_init.c	2026-11-16 21:18:35
++++ b/osfmk/arm/arm_init.c	2026-11-16 21:18:35
+@@ -337,6 +337,39 @@
+ }
  
- 	arm_vm_init(xmaxmem, args);
+ /*
++ * gtaxllte bring-up markers: direct writes to the UEFI panel framebuffer,
++ * independent of the console and the panic path. The five vinfo fields match
++ * the prefix of the kernel's struct vc_info.
++ */
++struct gtaxllte_vc_info {
++	unsigned int  v_height;
++	unsigned int  v_width;
++	unsigned int  v_depth;
++	unsigned int  v_rowbytes;
++	unsigned long v_baseaddr;
++};
++extern struct gtaxllte_vc_info vinfo;
 +
-+	/*
-+	 * The panic screen runs before any display driver exists. Map the panel's
-+	 * scanout buffer now and point vinfo at it, so an early root-mount panic
-+	 * has a place to draw instead of parking silently.
-+	 */
-+	{
-+		struct gtaxllte_vc_info {
-+			unsigned int  v_height;
-+			unsigned int  v_width;
-+			unsigned int  v_depth;
-+			unsigned int  v_rowbytes;
-+			unsigned long v_baseaddr;
-+		};
-+		extern struct gtaxllte_vc_info vinfo;
- 
-+		vinfo.v_baseaddr = (unsigned long)ml_io_map_wcomb(0x67000000, 0x008ca000);
-+		vinfo.v_width    = 1200;
-+		vinfo.v_height   = 1920;
-+		vinfo.v_depth    = 32;
-+		vinfo.v_rowbytes = 1200 * 4;
++void
++gtaxllte_fb_bar(unsigned int y, unsigned int color)
++{
++	volatile unsigned int *fb;
++	unsigned int row, x, dy;
 +
-+		/* Direct marker: this runs only if arm_vm_init() returned. */
-+		{
-+			volatile unsigned int *fb = (volatile unsigned int *)vinfo.v_baseaddr;
-+			unsigned int row = vinfo.v_rowbytes / 4;
-+			for (unsigned int y = 0; y < 32; y++) {
-+				for (unsigned int x = 0; x < vinfo.v_width; x++) {
-+					fb[(400 + y) * row + x] = 0x0000FF00;
-+				}
-+			}
++	if (vinfo.v_baseaddr == 0 || vinfo.v_width == 0 ||
++	    vinfo.v_rowbytes < vinfo.v_width * 4 || y + 32 > vinfo.v_height) {
++		return;
++	}
++	fb = (volatile unsigned int *)vinfo.v_baseaddr;
++	row = vinfo.v_rowbytes / 4;
++	for (dy = 0; dy < 32; dy++) {
++		for (x = 0; x < vinfo.v_width; x++) {
++			fb[(y + dy) * row + x] = color;
 +		}
 +	}
++}
++
++/*
+  *		Routine:		arm_init
+  *		Function:		Runs on the boot CPU, once, on entry from iBoot.
+  */
+@@ -521,6 +554,13 @@
+ 
+ 	arm_vm_init(xmaxmem, args);
+ 
++	vinfo.v_baseaddr = (unsigned long)ml_io_map_wcomb(0x67000000, 0x008ca000);
++	vinfo.v_width    = 1200;
++	vinfo.v_height   = 1920;
++	vinfo.v_depth    = 32;
++	vinfo.v_rowbytes = 1200 * 4;
++	gtaxllte_fb_bar(400, 0x0000FF00);   /* arm_vm_init returned: green */
 +
  	if (debug_boot_arg) {
  		patch_low_glo();
  	}
+@@ -578,6 +618,7 @@
+ 
+ 	/* setup console output */
+ 	PE_init_printf(FALSE);
++	gtaxllte_fb_bar(500, 0x00FF0000);   /* console init returned: red */
+ 
+ #if __arm64__
+ #if DEBUG

@@ -72,6 +72,7 @@ jobs:
           # Prelinked kernel: native-only workarounds are omitted. The early
           # framebuffer and the read-only eMMC probe are diagnostics.
           zzz-panic-framebuffer.patch
+          zzz-iokit-bar.patch
           zzz-emmc-probe.patch
           EOF
       - name: native config audit
