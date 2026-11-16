@@ -1,6 +1,6 @@
---- a/osfmk/arm/arm_init.c	2026-11-16 21:18:35
-+++ b/osfmk/arm/arm_init.c	2026-11-16 21:18:35
-@@ -337,6 +337,39 @@
+--- a/osfmk/arm/arm_init.c	2026-11-16 22:17:48
++++ b/osfmk/arm/arm_init.c	2026-11-16 22:17:48
+@@ -337,6 +337,63 @@
  }
  
  /*
@@ -16,6 +16,30 @@
 +	unsigned long v_baseaddr;
 +};
 +extern struct gtaxllte_vc_info vinfo;
++
++void
++gtaxllte_fb_mark(unsigned int index, unsigned int color)
++{
++	volatile unsigned int *fb;
++	unsigned int row, x, y, dy;
++
++	if (vinfo.v_baseaddr == 0 || vinfo.v_width == 0 ||
++	    vinfo.v_rowbytes < vinfo.v_width * 4) {
++		return;
++	}
++	fb = (volatile unsigned int *)vinfo.v_baseaddr;
++	row = vinfo.v_rowbytes / 4;
++	x = 40 + index * 64;
++	y = 820;
++	if (x + 48 > vinfo.v_width || y + 48 > vinfo.v_height) {
++		return;
++	}
++	for (dy = 0; dy < 48; dy++) {
++		for (unsigned int dx = 0; dx < 48; dx++) {
++			fb[(y + dy) * row + x + dx] = color;
++		}
++	}
++}
 +
 +void
 +gtaxllte_fb_bar(unsigned int y, unsigned int color)
@@ -40,7 +64,7 @@
   *		Routine:		arm_init
   *		Function:		Runs on the boot CPU, once, on entry from iBoot.
   */
-@@ -521,6 +554,13 @@
+@@ -521,6 +578,13 @@
  
  	arm_vm_init(xmaxmem, args);
  
@@ -54,7 +78,7 @@
  	if (debug_boot_arg) {
  		patch_low_glo();
  	}
-@@ -578,6 +618,7 @@
+@@ -578,6 +642,7 @@
  
  	/* setup console output */
  	PE_init_printf(FALSE);

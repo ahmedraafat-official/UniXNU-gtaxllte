@@ -65,19 +65,23 @@ jobs:
       - name: prelink patch set
         # The prelinked kernel carries the real kext collection; the native
         # crypto/trust-cache/UUID workarounds and the eMMC probe must not be
-        # applied to it. Keep only the early framebuffer/panic patch.
+        # applied to it. Keep the early framebuffer bars, the NULL-safe kmem
+        # wrapper and the crypto-free UUID: both are reached before the kexts
+        # start. The IOKit trace squares name the exact hang point.
         if: ${{ inputs.prelink }}
         run: |
           cat > device/patches/xnu/series <<'EOF'
           # Prelinked kernel: native-only workarounds are omitted. The early
-          # framebuffer and the read-only eMMC probe are diagnostics. The
-          # crypto-free platform UUID and the NULL-safe kmem wrapper are still
-          # needed: the corecrypto kext has not started at gRootNub->init.
+          # framebuffer, the IOKit trace squares and the read-only eMMC probe
+          # are diagnostics. The crypto-free platform UUID and the NULL-safe
+          # kmem wrapper are still needed: ConfigureIOKit() and the kmem zones
+          # run before the corecrypto kext has registered its provider.
           zzz-kmem-no-crypto.patch
           zzz-native-uuid.patch
           zzz-panic-framebuffer.patch
           zzz-iokit-bar.patch
           zzz-emmc-probe.patch
+          zzz-iokit-trace.patch
           EOF
       - name: native config audit
         # Fail before the 40-minute build if the defconfig still assumes the

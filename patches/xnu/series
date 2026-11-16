@@ -5,3 +5,4 @@ zzz-trustcache-stub.patch
 zzz-panic-framebuffer.patch
 zzz-iokit-bar.patch
 zzz-emmc-probe.patch
+zzz-iokit-trace.patch

@@ -1,0 +1,80 @@
+--- a/pexpert/arm/pe_init.c	2026-11-16 22:17:48
++++ b/pexpert/arm/pe_init.c	2026-11-16 22:17:48
+@@ -244,9 +244,6 @@
+ void
+ PE_init_iokit(void)
+ {
+-	extern void gtaxllte_fb_bar(unsigned int, unsigned int);
+-	gtaxllte_fb_bar(600, 0x000000FF);   /* PE_init_iokit entered: blue */
+-
+ 	DTEntry         entry;
+ 	unsigned int    size, scale;
+ 	unsigned long   display_size;
+@@ -258,7 +255,11 @@
+ 	uint32_t        load_kernel_start_value = 0;
+ 	uint32_t        populate_registry_time_value = 0;
+ 
++	extern void gtaxllte_fb_mark(unsigned int, unsigned int);
++	gtaxllte_fb_mark(1, 0x00FFFF00);   /* PE_init_iokit: entry */
++
+ 	PE_init_printf(TRUE);
++	gtaxllte_fb_mark(2, 0x00FFFF00);   /* vcattach returned */
+ 
+ 	printf("iBoot version: %s\n", iBoot_version);
+ #if defined(TARGET_OS_OSX) && defined(__arm64__)
+@@ -283,6 +284,7 @@
+ 	}
+ 
+ 	pe_prepare_images();
++	gtaxllte_fb_mark(4, 0x0000FFFF);   /* pe_prepare_images returned */
+ 
+ 	scale = PE_state.video.v_scale;
+ 	flip = 1;
+@@ -374,8 +376,11 @@
+ #endif
+ 	}
+ 
++	gtaxllte_fb_mark(5, 0x0000FF00);   /* InitIOKit entry */
+ 	InitIOKit(PE_state.deviceTreeHead);
++	gtaxllte_fb_mark(10, 0x0000FF00);  /* InitIOKit returned */
+ 	ConfigureIOKit();
++	gtaxllte_fb_mark(11, 0x00FF00FF);  /* ConfigureIOKit returned */
+ }
+ 
+ void
+--- a/iokit/Kernel/IOStartIOKit.cpp	2026-11-16 22:17:48
++++ b/iokit/Kernel/IOStartIOKit.cpp	2026-11-16 22:17:48
+@@ -143,23 +143,33 @@
+ 	// of iokit basic service initialisation, or better we have IOLib stuff
+ 	// initialise as basic OS services.
+ 	//
++	extern void gtaxllte_fb_mark(unsigned int, unsigned int);
++
+ 	IOLibInit();
++	gtaxllte_fb_mark(6, 0x0000FF00);   /* IOLibInit returned */
+ 	OSlibkernInit();
++	gtaxllte_fb_mark(7, 0x0000FF00);   /* OSlibkernInit returned */
+ 	IOMachPortInitialize();
++	gtaxllte_fb_mark(8, 0x0000FF00);   /* IOMachPortInitialize returned */
+ 
+ 	gIOProgressBackbufferKey  = OSSymbol::withCStringNoCopy(kIOProgressBackbufferKey);
++	gtaxllte_fb_mark(13, 0x0000FF00);  /* progress key returned */
+ 	gIORemoveOnReadProperties = OSSet::withObjects((const OSObject **) &gIOProgressBackbufferKey, 1);
++	gtaxllte_fb_mark(14, 0x0000FF00);  /* remove-on-read set returned */
+ 
+ 	interruptAccountingInit();
++	gtaxllte_fb_mark(15, 0x0000FF00);  /* interruptAccountingInit returned */
+ 
+ 	gRootNub = new IOPlatformExpertDevice;
+ 	if (__improbable(gRootNub == NULL)) {
+ 		panic("Failed to allocate IOKit root nub");
+ 	}
++	gtaxllte_fb_mark(9, 0x00FFFF00);   /* root nub allocated */
+ 	bool ok = gRootNub->init(dtTop);
+ 	if (__improbable(!ok)) {
+ 		panic("Failed to initialize IOKit root nub");
+ 	}
++	gtaxllte_fb_mark(12, 0x00FF00FF);  /* gRootNub->init returned */
+ 	gRootNub->attach(NULL);
+ 
+ 	/* If the bootstrap segment set up a function to record startup
