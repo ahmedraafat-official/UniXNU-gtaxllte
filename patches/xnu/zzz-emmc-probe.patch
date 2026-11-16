@@ -1,6 +1,112 @@
---- a/bsd/kern/bsd_init.c	2026-11-16 21:20:52
-+++ b/bsd/kern/bsd_init.c	2026-11-16 21:20:52
-@@ -481,6 +481,28 @@
+--- a/bsd/kern/bsd_init.c	2026-11-16 22:21:54
++++ b/bsd/kern/bsd_init.c	2026-11-16 22:21:54
+@@ -478,9 +478,161 @@
+  * of the tro_ucred field so that the uthread structure can be
+  * used like any other.
+  */
++
++/*
++ * gtaxllte E1/E2: Samsung MSHC (dwmmc0 @ 0x13540000) probe.
++ *
++ * The register layout is the Samsung MSHC one (MshcHost.h in Mu-Silicium),
++ * not the generic Synopsys DW layout. UEFI's MshcDxe initializes this
++ * controller, so the card should be selected with 512-byte blocks and the
++ * CIU clock enabled. The first pass only reads LBA 0 and LBA 1 through the
++ * PIO FIFO and prints everything on the panic screen; no register or card
++ * state is modified except the interrupt-clear and per-command data setup.
++ */
++#define GT_MSHCI_CTRL      0x00u
++#define GT_MSHCI_PWREN     0x04u
++#define GT_MSHCI_CLKDIV    0x08u
++#define GT_MSHCI_CLKENA    0x10u
++#define GT_MSHCI_TMOUT     0x14u
++#define GT_MSHCI_CTYPE     0x18u
++#define GT_MSHCI_BLKSIZ    0x1cu
++#define GT_MSHCI_BYTCNT    0x20u
++#define GT_MSHCI_CMDARG    0x28u
++#define GT_MSHCI_CMD       0x2cu
++#define GT_MSHCI_RESP0     0x30u
++#define GT_MSHCI_RINTSTS   0x44u
++#define GT_MSHCI_STATUS    0x48u
++#define GT_MSHCI_FIFOTH    0x4cu
++#define GT_MSHCI_CDETECT   0x50u
++#define GT_MSHCI_VERID     0x6cu
++#define GT_MSHCI_HCON      0x70u
++#define GT_MSHCI_BMOD      0x80u
++#define GT_MSHCI_IDSTS     0x90u
++#define GT_MSHCI_FIFO_OLD  0x100u
++#define GT_MSHCI_FIFO_240A 0x200u
++
++#define GT_MMC_CMD_RESP     (1u << 6)
++#define GT_MMC_CMD_CRC      (1u << 8)
++#define GT_MMC_CMD_DATA     (1u << 9)
++#define GT_MMC_CMD_WAIT     (1u << 13)
++#define GT_MMC_CMD_HOLD     (1u << 29)
++#define GT_MMC_CMD_START    (1u << 31)
++#define GT_MMC_RINT_RXDR    (1u << 5)
++#define GT_MMC_RINT_DTO     (1u << 3)
++#define GT_MMC_RINT_BUSY    (1u << 9)   /* STATUS data_busy */
++#define GT_MMC_RINT_ERRORS  ((1u << 1) | (1u << 6) | (1u << 7) | \
++                             (1u << 8) | (1u << 9) | (1u << 10) | \
++                             (1u << 11) | (1u << 15))
++
++static unsigned int
++gtaxllte_mmc_rd(unsigned long base, unsigned int off)
++{
++	return *(volatile unsigned int *)(base + off);
++}
++
++static void
++gtaxllte_mmc_wr(unsigned long base, unsigned int off, unsigned int value)
++{
++	*(volatile unsigned int *)(base + off) = value;
++}
++
++static int
++gtaxllte_mmc_read_block(unsigned long base, unsigned int fifo,
++    unsigned int lba, unsigned int *words, unsigned int *rint_out)
++{
++	unsigned int spin, rint = 0, status, count, done = 0;
++
++	for (spin = 0; spin < 200000; spin++) {
++		if (!(gtaxllte_mmc_rd(base, GT_MSHCI_STATUS) &
++		    GT_MMC_RINT_BUSY)) {
++			break;
++		}
++	}
++	gtaxllte_mmc_wr(base, GT_MSHCI_RINTSTS, 0xffffffffu);
++	gtaxllte_mmc_wr(base, GT_MSHCI_TMOUT, 0xffffffffu);
++	gtaxllte_mmc_wr(base, GT_MSHCI_BLKSIZ, 512);
++	gtaxllte_mmc_wr(base, GT_MSHCI_BYTCNT, 512);
++	gtaxllte_mmc_wr(base, GT_MSHCI_CMDARG, lba);
++	/* CMD17, short response with CRC, data expected, 512 bytes. */
++	gtaxllte_mmc_wr(base, GT_MSHCI_CMD,
++	    17u | GT_MMC_CMD_RESP | GT_MMC_CMD_CRC | GT_MMC_CMD_DATA |
++	    GT_MMC_CMD_WAIT | GT_MMC_CMD_HOLD | GT_MMC_CMD_START);
++
++	for (spin = 0; spin < 2000000 && done < 128; spin++) {
++		rint = gtaxllte_mmc_rd(base, GT_MSHCI_RINTSTS);
++		if (rint & GT_MMC_RINT_ERRORS) {
++			break;
++		}
++		status = gtaxllte_mmc_rd(base, GT_MSHCI_STATUS);
++		count = (status >> 17) & 0x1fffu;
++		while (count != 0 && done < 128) {
++			words[done++] = gtaxllte_mmc_rd(base, fifo);
++			count--;
++		}
++		if (count != 0) {
++			gtaxllte_mmc_wr(base, GT_MSHCI_RINTSTS,
++			    GT_MMC_RINT_RXDR);
++		}
++		if ((rint & GT_MMC_RINT_DTO) && done == 128) {
++			break;
++		}
++	}
++	*rint_out = rint;
++	return (done == 128 && !(rint & GT_MMC_RINT_ERRORS)) ? 0 : -1;
++}
++
  void
  bsd_init(void)
  {
@@ -8,24 +114,51 @@
 +	gtaxllte_fb_bar(700, 0x00FFFF00);   /* bsd_init entered: yellow */
 +
 +	/*
-+	 * gtaxllte E1: read the DWMSHC (eMMC) controller state S-Boot left
-+	 * behind. bsd_init runs after PE_init_iokit, so a panic screen here
-+	 * also proves OSMetaClass::postModLoad completed. Read-only; no card
-+	 * command is issued yet.
++	 * gtaxllte E1/E2: read the DWMSHC (eMMC) controller state S-Boot/UEFI
++	 * left behind, then read LBA 0 and LBA 1 through the PIO FIFO. The
++	 * panic prints the registers and the first words of both sectors, so
++	 * the photo is the whole E1/E2 record. Read-only: no card command is
++	 * issued before the register dump, and no register write changes the
++	 * bus width, clock or power state.
 +	 */
 +	{
 +		extern vm_offset_t ml_io_map(vm_offset_t, vm_size_t);
-+		volatile uint32_t *mmc =
-+		    (volatile uint32_t *)ml_io_map(0x13540000, 0x2000);
-+		panic("gtaxllte dwmmc0 ver=%08x ctrl=%08x clkena=%08x "
-+		    "clkdiv=%08x status=%08x rint=%08x fifoth=%08x "
-+		    "bmod=%08x idsts=%08x cdetect=%08x",
-+		    mmc[0x58 / 4], mmc[0x00 / 4], mmc[0x10 / 4],
-+		    mmc[0x08 / 4], mmc[0x34 / 4], mmc[0x30 / 4],
-+		    mmc[0x38 / 4], mmc[0x80 / 4], mmc[0x8c / 4],
-+		    mmc[0x3c / 4]);
-+	}
++		unsigned long base = ml_io_map(0x13540000, 0x2000);
++		unsigned int verid = gtaxllte_mmc_rd(base, GT_MSHCI_VERID);
++		unsigned int hcon  = gtaxllte_mmc_rd(base, GT_MSHCI_HCON);
++		unsigned int ctrl  = gtaxllte_mmc_rd(base, GT_MSHCI_CTRL);
++		unsigned int pwr   = gtaxllte_mmc_rd(base, GT_MSHCI_PWREN);
++		unsigned int clken = gtaxllte_mmc_rd(base, GT_MSHCI_CLKENA);
++		unsigned int clkdiv= gtaxllte_mmc_rd(base, GT_MSHCI_CLKDIV);
++		unsigned int status= gtaxllte_mmc_rd(base, GT_MSHCI_STATUS);
++		unsigned int rint  = gtaxllte_mmc_rd(base, GT_MSHCI_RINTSTS);
++		unsigned int fifoth= gtaxllte_mmc_rd(base, GT_MSHCI_FIFOTH);
++		unsigned int bmod  = gtaxllte_mmc_rd(base, GT_MSHCI_BMOD);
++		unsigned int idsts = gtaxllte_mmc_rd(base, GT_MSHCI_IDSTS);
++		unsigned int cdet  = gtaxllte_mmc_rd(base, GT_MSHCI_CDETECT);
++		unsigned int ctype = gtaxllte_mmc_rd(base, GT_MSHCI_CTYPE);
++		unsigned int fifo  = ((verid & 0xffffu) < 0x240au) ?
++		    GT_MSHCI_FIFO_OLD : GT_MSHCI_FIFO_240A;
++		unsigned int sector[128];
++		unsigned int r0 = 0, r1 = 0, mbr = 0, gpt0 = 0, gpt1 = 0;
++		int s0 = -1, s1 = -1;
 +
++		if (verid != 0xffffffffu && (pwr & 1u) != 0 &&
++		    (clken & 1u) != 0) {
++			s0 = gtaxllte_mmc_read_block(base, fifo, 0, sector, &r0);
++			mbr = sector[127] >> 16;
++			s1 = gtaxllte_mmc_read_block(base, fifo, 1, sector, &r1);
++			gpt0 = sector[0];
++			gpt1 = sector[1];
++		}
++		panic("gtaxllte dwmmc0 ver=%08x hcon=%08x pwr=%08x ctrl=%08x "
++		    "clkena=%08x clkdiv=%08x ctype=%08x status=%08x "
++		    "rint=%08x fifoth=%08x bmod=%08x idsts=%08x cdet=%08x "
++		    "| lba0=%d/%08x mbr=%04x lba1=%d/%08x gpt=%08x %08x",
++		    verid, hcon, pwr, ctrl, clken, clkdiv, ctype, status,
++		    rint, fifoth, bmod, idsts, cdet,
++		    s0, r0, mbr, s1, r1, gpt0, gpt1);
++	}
  	struct uthread *ut;
  	vnode_t init_rootvnode = NULLVP;
  	struct proc_ro_data kernproc_ro_data = {
