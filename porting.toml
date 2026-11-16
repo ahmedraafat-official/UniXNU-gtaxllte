@@ -193,7 +193,10 @@ paths = ["scripts/*payload*", "scripts/*image*", "scripts/*flash*", "patches/**"
 inputs = ["Identify the image assembly hardware, resources and existing component interfaces for this board."]
 configuration = ["Record the board.toml fields, DTS properties and defconfig values used for image assembly."]
 procedure = ["Follow the image assembly stage in the porting guide and record the actual commands."]
-findings = ["Collect the first image assembly observation, its cause when established, and the resulting implementation decision."]
+findings = [
+  "The prelink build overrides the device patch series: native-only workarounds are excluded, while the early framebuffer bars, the NULL-safe kmem wrapper, the crypto-free platform UUID, the read-only eMMC probe and the IOKit trace squares stay in.",
+  "The package step always fails at strip on the 49 MiB prelinked Mach-O; the prelinked-kernel artifact is uploaded with if: always() and is the image written to HIDDEN.",
+]
 completion = ["Kernel and prelink succeed, payload contains all declared inputs, and the boot image matches the bootloader format and size limit."]
 limits = ["Hardware inputs and implementation are pending for this example board."]
 next_action = ["Inventory the required image assembly inputs before implementation."]

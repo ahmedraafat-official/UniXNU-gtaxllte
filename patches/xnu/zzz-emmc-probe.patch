@@ -1,6 +1,6 @@
---- a/bsd/kern/bsd_init.c	2026-11-16 22:21:54
-+++ b/bsd/kern/bsd_init.c	2026-11-16 22:21:54
-@@ -478,9 +478,161 @@
+--- a/bsd/kern/bsd_init.c	2026-11-16 22:24:06
++++ b/bsd/kern/bsd_init.c	2026-11-16 22:24:06
+@@ -478,9 +478,162 @@
   * of the tro_ucred field so that the uthread structure can be
   * used like any other.
   */
@@ -45,10 +45,11 @@
 +#define GT_MMC_CMD_START    (1u << 31)
 +#define GT_MMC_RINT_RXDR    (1u << 5)
 +#define GT_MMC_RINT_DTO     (1u << 3)
-+#define GT_MMC_RINT_BUSY    (1u << 9)   /* STATUS data_busy */
++#define GT_MMC_STATUS_BUSY  (1u << 9)
 +#define GT_MMC_RINT_ERRORS  ((1u << 1) | (1u << 6) | (1u << 7) | \
 +                             (1u << 8) | (1u << 9) | (1u << 10) | \
-+                             (1u << 11) | (1u << 15))
++                             (1u << 11) | (1u << 12) | (1u << 13) | \
++                             (1u << 15))
 +
 +static unsigned int
 +gtaxllte_mmc_rd(unsigned long base, unsigned int off)
@@ -70,7 +71,7 @@
 +
 +	for (spin = 0; spin < 200000; spin++) {
 +		if (!(gtaxllte_mmc_rd(base, GT_MSHCI_STATUS) &
-+		    GT_MMC_RINT_BUSY)) {
++		    GT_MMC_STATUS_BUSY)) {
 +			break;
 +		}
 +	}
