@@ -1,6 +1,6 @@
---- a/bsd/kern/bsd_init.c	2026-11-16 23:43:53
-+++ b/bsd/kern/bsd_init.c	2026-11-16 23:43:53
-@@ -562,10 +562,174 @@
+--- a/bsd/kern/bsd_init.c	2026-11-17 00:13:13
++++ b/bsd/kern/bsd_init.c	2026-11-17 00:13:13
+@@ -562,10 +562,184 @@
  	}
  }
  #endif
@@ -135,7 +135,14 @@
 +	 * bus width, clock or power state.
 +	 */
 +	{
++		unsigned int enabled = 0;
 +		extern vm_offset_t ml_io_map(vm_offset_t, vm_size_t);
++
++		if (!PE_parse_boot_argn("bsd-emmc-probe", &enabled,
++		    sizeof(enabled)) || enabled == 0) {
++			goto emmc_probe_done;
++		}
++		{
 +		unsigned long base = ml_io_map(0x13540000, 0x2000);
 +		unsigned int verid = gtaxllte_mmc_rd(base, GT_MSHCI_VERID);
 +		unsigned int hcon  = gtaxllte_mmc_rd(base, GT_MSHCI_HCON);
@@ -171,6 +178,9 @@
 +		    verid, hcon, pwr, ctrl, clken, clkdiv, ctype, status,
 +		    rint, fifoth, bmod, idsts, cdet,
 +		    s0, r0, mbr, s1, r1, gpt0, gpt1);
++		}
++emmc_probe_done:
++		;
 +	}
  	struct uthread *ut;
  	vnode_t init_rootvnode = NULLVP;

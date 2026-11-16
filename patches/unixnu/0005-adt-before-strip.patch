@@ -1,7 +1,7 @@
 diff --git a/scripts/unixnu/payload.py b/scripts/unixnu/payload.py
 index 0000000..0000000 100644
---- a/scripts/unixnu/payload.py	2026-11-16 22:43:58
-+++ b/scripts/unixnu/payload.py	2026-11-16 22:43:58
+--- a/scripts/unixnu/payload.py	2026-11-17 00:15:37
++++ b/scripts/unixnu/payload.py	2026-11-17 00:15:37
 @@ -189,6 +189,14 @@
              boot_args = ' '.join([line, *spec.get('install', {}).get('confirm_args', [])])
              run(['python3', ctx.tree / 'scripts/seal-source-crypto-kernel.py', payloads / 'kernel.macho', '--kernel-args', boot_args],

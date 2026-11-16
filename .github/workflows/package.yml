@@ -85,6 +85,7 @@ jobs:
           zzz-boot-trace.patch
           zzz-emmc-early.patch
           zzz-max-cpus.patch
+          zzz-native-dwmmc-personality.patch
           EOF
       - name: native config audit
         # Fail before the 40-minute build if the defconfig still assumes the
@@ -96,6 +97,7 @@ jobs:
           git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0001-bootimg-gtaxllte.patch"
           git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0002-payload-strip.patch"
           git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0003-payload-fat16.patch"
+          git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0004-xnu-native-dwmmc.patch"
           git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0005-adt-before-strip.patch"
       - uses: actions/setup-python@v5
         with:

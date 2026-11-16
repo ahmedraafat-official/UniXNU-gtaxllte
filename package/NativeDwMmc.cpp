@@ -67,6 +67,7 @@ class NativeDwMmc : public IOBlockStorageDevice {
   IOLock *gate = nullptr;
   uintptr_t registers = 0;
   uint32_t fifo = 0;
+  uint32_t itemWords = 1;
   bool online = false;
 
   uint32_t read32(uint32_t offset) const {
@@ -154,7 +155,7 @@ IOReturn NativeDwMmc::readBlock(uint32_t lba, void *buffer) {
   write32(kTimeout, 0xffffffffu);
   write32(kBlkSiz, kSectorBytes);
   write32(kByteCnt, kSectorBytes);
-  write32(kCmdArg, kFirstLba + lba);
+  write32(kCmdArg, static_cast<uint32_t>(kFirstLba + lba));
   write32(kCmd, 17u | kCmdResp | kCmdCrc | kCmdData | kCmdWait | kCmdHold | kCmdStart);
 
   for (spin = 0; spin < 2000000 && done < kSectorBytes / 4; spin++) {
@@ -163,13 +164,20 @@ IOReturn NativeDwMmc::readBlock(uint32_t lba, void *buffer) {
     status = read32(kStatus);
     count = (status >> 17) & 0x1fffu;
     while (count != 0 && done < kSectorBytes / 4) {
-      words[done++] = read32(fifo);
+      for (uint32_t w = 0; w < itemWords && done < kSectorBytes / 4; w++) {
+        words[done++] = read32(fifo + w * 4);
+      }
       count--;
     }
     if (count != 0) write32(kRintSts, kRintRxdr);
-    if ((rint & kRintDto) && done == kSectorBytes / 4) break;
   }
-  return (done == kSectorBytes / 4 && !(rint & kErrors)) ?
+  if (done == kSectorBytes / 4) {
+    for (spin = 0; spin < 200000; spin++) {
+      rint = read32(kRintSts);
+      if (rint & (kRintDto | kErrors)) break;
+    }
+  }
+  return (done == kSectorBytes / 4 && (rint & kRintDto) && !(rint & kErrors)) ?
       kIOReturnSuccess : kIOReturnTimeout;
 }
 
@@ -199,6 +207,7 @@ bool NativeDwMmc::start(IOService *provider) {
   uint32_t verid = read32(kVerId);
   if (verid == 0 || verid == 0xffffffffu) return false;
   fifo = ((verid & 0xffffu) < 0x240au) ? kFifoLegacy : kFifo240A;
+  itemWords = (((read32(kHcon) >> 7) & 7) == 2) ? 2 : 1;
   if (!(read32(kPwrEn) & 1u) || !(read32(kClkEna) & 1u)) return false;
   transfer = IOBufferMemoryDescriptor::inTaskWithOptions(kernel_task,
       static_cast<IOOptionBits>(kIODirectionIn), kTransferBytes, 0x1000);

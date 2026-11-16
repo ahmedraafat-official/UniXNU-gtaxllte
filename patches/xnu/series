@@ -8,4 +8,5 @@ zzz-emmc-probe.patch
 zzz-iokit-trace.patch
 zzz-boot-trace.patch
 zzz-emmc-early.patch
+zzz-native-dwmmc-personality.patch
 zzz-max-cpus.patch

@@ -37,6 +37,7 @@ archives = [
   "component:ArmCpu",
   "build-mockfs-fixture.py",
   "build-libpthread-kernel.py",
+  "build-native-dwmmc.py",
 ]
 # The shared ARM64 fragment selects ArmCpu and the architectural timer. The
 # SoC fragment turns PAN off: the Cortex-A53s are ARMv8.0.

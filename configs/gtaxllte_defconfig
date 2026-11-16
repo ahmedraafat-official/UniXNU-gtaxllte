@@ -13,6 +13,7 @@ CONFIG_XNU_CRYPTO_BOOTSTRAP="prelinked"
 # No storage, display, input or GPU driver yet. The first image stops at the
 # root mount after the kernel entry checkpoint.
 # CONFIG_XNU_NATIVE_UFS is not set
+CONFIG_XNU_NATIVE_DWMMC=y
 # CONFIG_XNU_NATIVE_ADRENO is not set
 # The shared ARM64 fragment selects SoftwareAES, whose NativeAES subclasses
 # IOAESAccelerator from the prelinked kext collection. A --skip-prelink kernel
