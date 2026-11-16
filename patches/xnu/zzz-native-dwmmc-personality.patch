@@ -1,0 +1,15 @@
+diff --git a/iokit/KernelConfigTables.cpp b/iokit/KernelConfigTables.cpp
+--- c/iokit/KernelConfigTables.cpp	2026-11-16 22:41:58
++++ b/iokit/KernelConfigTables.cpp	2026-11-16 22:41:58
+@@ -88,4 +88,11 @@
+     "     'IOProbeScore'    = 500:32;"
+     "   }"
+ #endif
++#if defined(XNU_NATIVE_DWMMC) && XNU_NATIVE_DWMMC
++    "   ,{"
++    "     'IOClass'         = NativeDwMmc;"
++    "     'IOProviderClass' = IOPlatformDevice;"
++    "     'IOProbeScore'    = 1000:32;"
++    "   }"
++#endif
+     ")";

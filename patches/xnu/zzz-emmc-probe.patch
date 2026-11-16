@@ -155,7 +155,7 @@
 +		panic("gtaxllte dwmmc0 ver=%08x hcon=%08x pwr=%08x ctrl=%08x "
 +		    "clkena=%08x clkdiv=%08x ctype=%08x status=%08x "
 +		    "rint=%08x fifoth=%08x bmod=%08x idsts=%08x cdet=%08x "
-+		    "| lba0=%d/%08x mbr=%04x lba1=%d/%08x gpt=%08x %08x",
++		    "| lba0=%x/%08x mbr=%04x lba1=%x/%08x gpt=%08x %08x",
 +		    verid, hcon, pwr, ctrl, clken, clkdiv, ctype, status,
 +		    rint, fifoth, bmod, idsts, cdet,
 +		    s0, r0, mbr, s1, r1, gpt0, gpt1);
