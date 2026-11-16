@@ -70,6 +70,21 @@ roots = [
   "com.apple.security.sandbox",
 ]
 
+[userdata]
+# Measured GPT geometry (phase0/emmc-dump/partition-sectors.txt): the
+# USERDATA partition on the eMMC, exposed by NativeDwMmc as 512-byte sectors.
+first_lba = 8013824
+last_lba = 61057023
+lba_bytes = 512
+windows = [
+  { name = "OS", component = "OS" },
+  { name = "SystemOS", component = "Cryptex1,SystemOS", optional = true },
+]
+
+[root]
+# The OS disk image volume UUID the root policy signs (same IPSW as pipa).
+os_volume_uuid = "04769D26-2CA0-4825-B443-E2E5F88300F2"
+
 [device_tree]
 source = "device:dts/gtaxllte.dts"
 include_dirs = ["soc:dts"]
@@ -150,3 +165,5 @@ unique_chip_id = "required"
 # 448 MiB fits with margin. Freeing the unused ION heaps in the UEFI map is
 # milestone M4; until then do not raise this past 0x1D000000.
 owned_memory_size = "0x1C000000"
+# The OS volume inside the SHNGROOT OS window; the root mount waits for this UUID.
+root_match_volume_uuid = "04769D26-2CA0-4825-B443-E2E5F88300F2"
