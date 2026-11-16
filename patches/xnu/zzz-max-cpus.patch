@@ -1,0 +1,26 @@
+--- a2/osfmk/kern/startup.c	2026-11-16 23:14:42
++++ b/osfmk/kern/startup.c	2026-11-16 23:14:42
+@@ -808,14 +808,21 @@
+ 	gtaxllte_fb_mark(31, 0x00808080);   /* IOKit matching started */
+ #endif
+ 	/*
+-	 * max_cpus must be nailed down by the time PE_lockdown_iokit() finishes,
+-	 * at the latest
++	 * gtaxllte: the native ArmCpu owns /cpus, but its IOCPU interrupt
++	 * controller setup is skipped when the GIC probe is unavailable, which
++	 * leaves max_cpus unset. kperf_init_early() then sleeps forever in
++	 * ml_wait_max_cpus(). The count itself is machine_info.max_cpus,
++	 * computed from the ADT; the argument only releases the waiter here.
+ 	 */
++	ml_set_max_cpus(ml_get_max_cpu_number() + 1);
++	gtaxllte_fb_mark(34, 0x00FFFFFF);   /* max CPUs marked set */
+ 	vm_set_restrictions(machine_info.max_cpus);
++	gtaxllte_fb_mark(35, 0x00FFFFFF);   /* vm restrictions set */
+ 
+ 
+ #if KPERF
+ 	kperf_init_early();
++	gtaxllte_fb_mark(36, 0x00FFFFFF);   /* kperf init returned */
+ #endif
+ 
+ 	/*

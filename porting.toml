@@ -201,6 +201,7 @@ findings = [
   "The prelink series now also carries the boot-phase trace squares (startup/bootstrap) and the boot-argument-gated early eMMC probe, so one image answers both the IOKit hang and the storage question.",
   "The payload builder now generates the ADT sidecar before the strip step, so a failed prelinked package still yields a fresh kernel.macho.adt next to the patched kernel; staging the ADT is opt-in until it is compared with the working one.",
   "Device XNU patches are generated against the post-arch-series source, not the pristine XNU tree: offline-component-load-probes.patch inserts its probes between the bsd_init comment and the function, so a context built from the pristine file no longer applies.",
+  "The boot-phase squares showed the prelinked kernel completing PE_lockdown_iokit and then stopping before bsd_init. The only blocking call between them is kperf_init_early()->ml_wait_max_cpus(); the native ArmCpu path does not call ml_set_max_cpus() on this board, so the boot now marks the maximum CPU count set explicitly before the VM restrictions and kperf.",
 ]
 completion = ["Kernel and prelink succeed, payload contains all declared inputs, and the boot image matches the bootloader format and size limit."]
 limits = ["Hardware inputs and implementation are pending for this example board."]
