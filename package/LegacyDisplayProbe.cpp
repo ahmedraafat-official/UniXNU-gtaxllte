@@ -641,3 +641,14 @@ void native_legacy_display_late_probe(void) {
     native_legacy_display_checkpoint();
 }
 }
+// The T830 has no GPU trace service, UFS DPU or panel-vblank backend yet.
+// The GopFramebuffer diagnostics test these optional symbols at runtime;
+// define the no-op transports so the static kernel link needs no other kit.
+extern "C" int native_gpu_trace_enabled(void) { return 0; }
+extern "C" void native_gpu_trace_record(uint32_t,uint32_t,const uint64_t *,uint32_t) {}
+extern "C" uint32_t native_gpu_trace_snapshot(void *,uint32_t) { return 0; }
+extern "C" uint32_t native_ufs_dpu_map(unsigned,const uint64_t *,unsigned) { return 0; }
+extern "C" volatile uint32_t native_ufs_dpu_state = 0;
+extern "C" unsigned native_legacy_vsync_state(uint64_t *last,uint64_t *interval,unsigned *rearms) {
+    if(last)*last=0;if(interval)*interval=0;if(rearms)*rearms=0;return 0;
+}
