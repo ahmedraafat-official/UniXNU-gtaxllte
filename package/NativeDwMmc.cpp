@@ -129,9 +129,10 @@ class NativeDwMmc : public IOBlockStorageDevice {
 OSDefineMetaClassAndStructors(NativeDwMmc, IOBlockStorageDevice)
 
 IOService *NativeDwMmc::probe(IOService *provider, SInt32 *score) {
+  static const char match[] = "samsung,exynos-dw-mshc";
   OSData *compatible = OSDynamicCast(OSData, provider->getProperty("compatible"));
-  if (!compatible || compatible->getLength() < 24 ||
-      memcmp(compatible->getBytesNoCopy(), "samsung,exynos-dw-mshc", 24)) {
+  if (!compatible || compatible->getLength() < sizeof(match) ||
+      memcmp(compatible->getBytesNoCopy(), match, sizeof(match))) {
     return nullptr;
   }
   return IOBlockStorageDevice::probe(provider, score);

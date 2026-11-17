@@ -18,6 +18,10 @@ on:
         description: "Build the prelinked kernel (the native images are the default)"
         type: boolean
         default: false
+      userdata:
+        description: "Also build the USERDATA root image (OS/SystemOS windows)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -130,6 +134,19 @@ jobs:
             echo 'Set the repository secret UNIXNU_UNIQUE_CHIP_ID: the platform seed of the device, 8 hex digits.' >&2
             exit 1
           fi
+      - name: userdata image
+        # Optional and separate from the kernel: the image is ~5 GiB and only
+        # written to the tablet with explicit approval. The package step stops
+        # at strip, so build it first.
+        if: ${{ inputs.userdata }}
+        working-directory: device
+        env:
+          UNIXNU_UNIQUE_CHIP_ID: ${{ secrets.UNIXNU_UNIQUE_CHIP_ID }}
+          GITHUB_TOKEN: ${{ github.token }}
+          IASL_PREFIX: /opt/homebrew/bin/
+          UNIXNU_DTB: ../uefi-gtaxllte/Resources/DTBs/gtaxllte.dtb
+        run: |
+          python3 ../unixnu/unixnu build userdata -D . --os "${{ inputs.os }}"
       - name: package
         working-directory: device
         env:
@@ -166,6 +183,14 @@ jobs:
             unixnu/out/gtaxllte/*/*/kernel/kernel.macho
             unixnu/out/gtaxllte/*/*/payload/stage/EFI/UniXNU/Payloads/kernel.macho
             unixnu/out/gtaxllte/*/*/payload/stage/EFI/UniXNU/Payloads/kernel.macho.adt
+      - name: userdata artifact
+        if: ${{ always() && inputs.userdata }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: userdata-image
+          retention-days: 1
+          if-no-files-found: warn
+          path: unixnu/out/gtaxllte/*/*/userdata/userdata-root.img
       - name: images
         uses: actions/upload-artifact@v4
         with:
