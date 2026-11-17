@@ -178,6 +178,28 @@ jobs:
           else
             scripts/package.sh --os "${{ inputs.os }}" --uefi ../uefi-gtaxllte --edk2 ../uefi-gtaxllte/Mu_Basecore --skip-prelink
           fi
+      - name: display kernel audit
+        # The first kernel pass carries only the bootstrap probe archive; make
+        # sure the artifact is the rebuilt kernel, not that reference, before
+        # it can be flashed.
+        if: ${{ always() && inputs.prelink }}
+        run: |
+          K=$(find unixnu/out/gtaxllte -path '*/kernel/kernel.macho' -print -quit)
+          test -n "$K"
+          strings "$K" | grep -q 'NativeLegacyDisplay: leaf=' || {
+            echo 'the prelinked kernel has no display backend; refusing the artifact' >&2
+            exit 1
+          }
+          P=$(find unixnu/out/gtaxllte -path '*/kernel/kernel.json' -print -quit)
+          test -n "$P"
+          python3 - "$P" <<'PY'
+          import json, sys
+          plan = json.load(open(sys.argv[1]))
+          family = 'com.apple.iokit.IOMobileGraphicsFamily'
+          extents = [entry for entry in plan['extents'] if entry['module'] == family]
+          assert extents, 'the prelink plan has no IOMobileGraphicsFamily'
+          print('display family extents:', extents)
+          PY
       - name: native prelink audit
         # A --skip-prelink kernel does not map the target's kernelcache. Any
         # external absolute symbol in prelink space is a boot-time fault
