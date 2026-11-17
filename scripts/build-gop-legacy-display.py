@@ -258,7 +258,10 @@ require(required_owned <= set(owned), 'The concrete backend lifecycle overrides 
 require(set(owned) <= required_owned | {0, 1, 7, 84},
         'Only qualified own methods and guarded leaves override')
 undefined = {name for name, _, kind in symbols if kind == 1 and 'IOMobileFramebufferLegacy' in name}
-require(undefined == set(bindings), 'All and only actual original-class imports qualified')
+# Every actual original-class import must have a recorded address. A recorded
+# address that the compiler did not import (the base vtable in some revisions)
+# is harmless: it only adds an unused absolute symbol to the archive.
+require(undefined <= set(bindings), 'All actual original-class imports qualified')
 
 # Exact original IOSurface getters, independently observed through the real
 # original swap request. These aliases call original code; no object layout
