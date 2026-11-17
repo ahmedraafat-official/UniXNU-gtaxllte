@@ -104,6 +104,7 @@ jobs:
           git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0004-xnu-native-dwmmc.patch"
           git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0005-adt-before-strip.patch"
           git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0006-adt-cells.patch"
+          git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0007-adt-phandle.patch"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
