@@ -137,6 +137,7 @@ class NativeDwMmc : public IOBlockStorageDevice {
   Window windows[4];
   uint32_t windowCount = 0;
   bool readManifest();
+ public:
   bool readWindow(uint64_t sector, uint32_t bytes, IOMemoryDescriptor *buffer,
       uint64_t bufferOffset);
 
