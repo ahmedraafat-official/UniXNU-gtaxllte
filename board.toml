@@ -39,6 +39,7 @@ archives = [
   "build-libpthread-kernel.py",
   "build-native-dwmmc.py",
   "build-storage-bindings.py --component NativeDwMmc --archive libNativeDwMmc.a",
+  "build-gop-legacy-display.py",
 ]
 # The shared ARM64 fragment selects ArmCpu and the architectural timer. The
 # SoC fragment turns PAN off: the Cortex-A53s are ARMv8.0.
@@ -145,7 +146,25 @@ title = "UniXNU"
 # A long countdown while the payload path is under bring-up: the menu is the
 # only place that reports whether the FAT volume and config were found.
 timeout = 30
-kernel_args = ["-v", "serial=3", "debug=0x14e", "kt_fixed_zones=120", "fips_mode=4", "armcpu-diagnostics=1", "-no_slto_panic"]
+kernel_args = [
+  "-v", "serial=3", "debug=0x14e", "kt_fixed_zones=120", "fips_mode=4",
+  "armcpu-diagnostics=1", "-no_slto_panic",
+  # The GOP/flat-panel display: load the original family, register the legacy
+  # backend as the system display, attach it to the firmware framebuffer and
+  # copy the compositor's frames with the CPU (no GPU driver yet).
+  "offline-mobile-graphics-load=1",
+  "offline-legacy-register=1",
+  "offline-legacy-phase=4",
+  "offline-legacy-gop=1",
+  "offline-legacy-unit-scale=2",
+  "offline-legacy-pm=1",
+  "offline-legacy-validate=1",
+  "offline-legacy-transfer=1",
+  "offline-legacy-cpu-present=1",
+  # The GOP has no vblank interrupt: a 60 Hz work-loop tick stands in for it.
+  "sheng-vsync=60",
+  "sheng-vsync-fixed=1",
+]
 # Draw the XNU entry bars and a panic screen on the firmware framebuffer. The
 # tablet has no accessible UART, so this is the M2 log route.
 panic_screen = true

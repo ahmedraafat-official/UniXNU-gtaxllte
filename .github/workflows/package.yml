@@ -150,6 +150,21 @@ jobs:
           UNIXNU_DTB: ../uefi-gtaxllte/Resources/DTBs/gtaxllte.dtb
         run: |
           python3 ../unixnu/unixnu build userdata -D . --os "${{ inputs.os }}"
+      - name: display reference kernel
+        # The Legacy display ABI audit needs this profile's prelinked layout.
+        # Build the kernel once with the bootstrap probe archive, then the
+        # package step rebuilds the display archive against that reference and
+        # relinks the final kernel.
+        if: ${{ inputs.prelink }}
+        working-directory: device
+        env:
+          UNIXNU_UNIQUE_CHIP_ID: ${{ secrets.UNIXNU_UNIQUE_CHIP_ID }}
+          GITHUB_TOKEN: ${{ github.token }}
+          IASL_PREFIX: /opt/homebrew/bin/
+          UNIXNU_DTB: ../uefi-gtaxllte/Resources/DTBs/gtaxllte.dtb
+        run: |
+          python3 ../unixnu/unixnu build kernel -D . --os "${{ inputs.os }}"
+          test -n "$(find ../unixnu/out/gtaxllte -path '*/kernel/kernel.macho' -print -quit)"
       - name: package
         working-directory: device
         env:

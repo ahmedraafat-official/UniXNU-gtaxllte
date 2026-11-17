@@ -14,6 +14,10 @@ CONFIG_XNU_CRYPTO_BOOTSTRAP="prelinked"
 # root mount after the kernel entry checkpoint.
 # CONFIG_XNU_NATIVE_UFS is not set
 CONFIG_XNU_NATIVE_DWMMC=y
+# The GOP/flat-panel legacy backend: the original IOMobileGraphicsFamily
+# lifecycle with an owned framebuffer backend, CPU presentation and the
+# firmware GOP as scanout. It needs the prelinked family closure in board.toml.
+CONFIG_XNU_NATIVE_LEGACY_DISPLAY=y
 # CONFIG_XNU_NATIVE_ADRENO is not set
 # The shared ARM64 fragment selects SoftwareAES, whose NativeAES subclasses
 # IOAESAccelerator from the prelinked kext collection. A --skip-prelink kernel
