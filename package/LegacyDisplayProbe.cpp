@@ -651,6 +651,12 @@ extern "C" uint32_t native_ufs_dpu_map(unsigned,const uint64_t *,unsigned) { ret
 extern "C" volatile uint32_t native_ufs_dpu_state = 0;
 extern "C" bool native_adreno_fences(uint32_t *,uint32_t *) { return false; }
 extern "C" bool native_adreno_fences_detail(uint32_t *,uint32_t *,uint32_t *) { return false; }
+// No boot-progress scanout writer is selected in the prelinked series: the
+// display owns the GOP from the first copy and the progress text is not drawn.
+extern "C" int boot_progress_prepare_scanout(void) { return 1; }
+extern "C" void boot_progress_cancel_scanout(void) {}
+extern "C" int boot_progress_pulse_anchor(uintptr_t,uint64_t,unsigned,unsigned,unsigned) { return 0; }
+extern "C" void boot_progress_stage(const char *) {}
 extern "C" unsigned native_legacy_vsync_state(uint64_t *last,uint64_t *interval,unsigned *rearms) {
     if(last)*last=0;if(interval)*interval=0;if(rearms)*rearms=0;return 0;
 }
