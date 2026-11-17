@@ -201,6 +201,20 @@ jobs:
           assert extents, 'the prelink plan has no IOMobileGraphicsFamily'
           print('display family extents:', extents)
           PY
+      - name: boot image artifact
+        # The native kernel still runs the display stub, but this artifact
+        # carries the current board.toml kernel args in its payload config.
+        # Upload it before the native prelink audit can fail on the storage
+        # driver's recorded absolute kext symbols.
+        if: ${{ always() && !inputs.prelink }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: boot-image
+          retention-days: 1
+          if-no-files-found: error
+          path: |
+            unixnu/out/gtaxllte/*/*/boot/boot.img
+            unixnu/out/gtaxllte/*/*/payload/payload.img
       - name: native prelink audit
         # A --skip-prelink kernel does not map the target's kernelcache. Any
         # external absolute symbol in prelink space is a boot-time fault
