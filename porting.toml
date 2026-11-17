@@ -4,7 +4,7 @@ schema_version = 1
 name = "gtaxllte"
 soc = "Exynos 7870"
 os_profile = "ipados-17.7.11-21H461"
-summary = "Samsung Galaxy Tab A 10.1 (2016) LTE (SM-T585). S-Boot loads the UniXNU UEFI, the menu and DarwinBoot hand off to XNU, and the prelinked kernel reaches PE_init_iokit. Storage, display, input and GPU drivers are the remaining work."
+summary = "Samsung Galaxy Tab A 10.1 (2016) LTE (SM-T585). S-Boot loads the UniXNU UEFI, DarwinBoot hands off to the prelinked XNU, NativeDwMmc reads the eMMC and publishes the USERDATA SHNGROOT windows, and the kernel mounts the APFS OS volume and reaches /sbin/launchd. DECON/DSI display, touch and the T830 GPU are the remaining work."
 
 [[area]]
 id = "configuration"
@@ -86,7 +86,7 @@ evidence = []
 
 [[area]]
 id = "storage"
-status = "planned"
+status = "device-verified"
 components = []
 paths = ["drivers/ShengUfs", "scripts/*ufs*", "scripts/*storage*", "scripts/*userdata*", "scripts/*root*", "scripts/*dwmmc*", "scripts/data/native-storage-original-bindings.S", "package/NativeDwMmc.cpp"]
 inputs = ["Identify the storage and root hardware, resources and existing component interfaces for this board."]
@@ -106,7 +106,9 @@ findings = [
 completion = ["Host: register, clock, link and SMMU facts match the board inventory.", "Reads: SCSI capacity, GPT and known blocks are correct; OS/SystemOS windows stay within userdata.", "Root: the configured volume mounts and launchd starts. Persistence: writes survive reboot within the allocated Data region."]
 limits = ["Hardware inputs and implementation are pending for this example board."]
 next_action = ["Inventory the required storage and root inputs before implementation."]
-evidence = []
+evidence = [
+  { kind = "device", reference = "PHASE0.md", result = "NativeDwMmc publishes the USERDATA SHNGROOT OS/SystemOS windows and XNU mounts the OS volume at the root-matching UUID, reaching load_init_program (markers 290-292).", command = "manual boot of the SM-T585; photos IMG_7754-IMG_7762 record the MSHC panic and the root-mount markers", revision = "c2452fb48cf8b4d78b9a810a32f0dd464580de96" },
+]
 
 [[area]]
 id = "display"

@@ -156,3 +156,17 @@ With the DTB in hand:
 
 Do not flash a UniXNU boot image before M1 is built and the backups are
 verified.
+
+## Root mount milestone (2026-11-17)
+
+The prelinked kernel now reaches `bsd_init`, mounts the APFS OS volume from the
+SHNGROOT `OS` window on USERDATA, installs the root vnode and calls
+`load_init_program`. The direct framebuffer markers record the path:
+
+- 270/271: `NativeDwMmc::start` and first USERDATA sector read;
+- 272/273: SHNGROOT manifest parsed and window service started;
+- 290/291/292: `vfs_mountroot` success, root vnode, init handoff.
+
+The panel still shows the UEFI menu because DECON/DSI display and touch drivers
+do not exist yet. The static trust cache and the signed root policy/SystemOS
+union are the next userland inputs.
