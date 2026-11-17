@@ -62,6 +62,8 @@ roots = [
   "com.apple.iokit.IOCryptoAcceleratorFamily",
   "com.apple.iokit.IOReportFamily",
   "com.apple.iokit.IOStorageFamily",
+  "com.apple.iokit.IOMobileGraphicsFamily",
+  "com.apple.iokit.IOSurface",
   "com.apple.kec.Libm",
   "com.apple.kec.corecrypto",
   "com.apple.kext.AppleMatch",

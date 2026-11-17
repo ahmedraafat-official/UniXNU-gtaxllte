@@ -186,6 +186,8 @@ jobs:
             unixnu/out/gtaxllte/*/*/kernel/kernel.macho
             unixnu/out/gtaxllte/*/*/payload/stage/EFI/UniXNU/Payloads/kernel.macho
             unixnu/out/gtaxllte/*/*/payload/stage/EFI/UniXNU/Payloads/kernel.macho.adt
+            unixnu/out/gtaxllte/*/*/kernel/kernel.json
+            unixnu/out/gtaxllte/*/*/kernel/kernel.map.json
       - name: userdata artifact
         if: ${{ always() && inputs.userdata }}
         uses: actions/upload-artifact@v4
