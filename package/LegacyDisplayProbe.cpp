@@ -649,6 +649,8 @@ extern "C" void native_gpu_trace_record(uint32_t,uint32_t,const uint64_t *,uint3
 extern "C" uint32_t native_gpu_trace_snapshot(void *,uint32_t) { return 0; }
 extern "C" uint32_t native_ufs_dpu_map(unsigned,const uint64_t *,unsigned) { return 0; }
 extern "C" volatile uint32_t native_ufs_dpu_state = 0;
+extern "C" bool native_adreno_fences(uint32_t *,uint32_t *) { return false; }
+extern "C" bool native_adreno_fences_detail(uint32_t *,uint32_t *,uint32_t *) { return false; }
 extern "C" unsigned native_legacy_vsync_state(uint64_t *last,uint64_t *interval,unsigned *rearms) {
     if(last)*last=0;if(interval)*interval=0;if(rearms)*rearms=0;return 0;
 }
