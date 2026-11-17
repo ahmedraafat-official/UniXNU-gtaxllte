@@ -163,6 +163,7 @@ jobs:
           IASL_PREFIX: /opt/homebrew/bin/
           UNIXNU_DTB: ../uefi-gtaxllte/Resources/DTBs/gtaxllte.dtb
         run: |
+          python3 ../unixnu/unixnu defconfig gtaxllte_defconfig -D . --os "${{ inputs.os }}"
           python3 ../unixnu/unixnu build kernel -D . --os "${{ inputs.os }}"
           test -n "$(find ../unixnu/out/gtaxllte -path '*/kernel/kernel.macho' -print -quit)"
       - name: package
