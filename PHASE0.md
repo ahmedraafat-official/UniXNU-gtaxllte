@@ -170,3 +170,15 @@ SHNGROOT `OS` window on USERDATA, installs the root vnode and calls
 The panel still shows the UEFI menu because DECON/DSI display and touch drivers
 do not exist yet. The static trust cache and the signed root policy/SystemOS
 union are the next userland inputs.
+
+## Display build integration (2026-11-17)
+
+The GOP/flat-panel legacy backend is now part of the kernel archives
+(`scripts/build-gop-legacy-display.py`, `CONFIG_XNU_NATIVE_LEGACY_DISPLAY=y`).
+Its ABI is bound to the original `IOMobileGraphicsFamily` at
+`0xfffffff00576c000`; the prelink plan is used as the qualification candidate.
+The workflow builds one reference kernel with bootstrap probe stubs, then
+rebuilds the real archive and prelinks the final kernel.
+
+The display probe marks stages 295-303 on the framebuffer bottom row, after the
+storage (270-275) and root (290-292) markers.

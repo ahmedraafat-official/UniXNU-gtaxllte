@@ -75,3 +75,31 @@ step is to adapt `UniXNU-sheng`'s `build-gop-legacy-display.py` to this
 candidate (use the plan JSON as the reference, skip the QEMU gdb observation
 via the recorded runtime hash, keep only the GOP/display probe) and compile
 `NativeLegacyDisplay` + `NativeGOPPresenter` into the late archive.
+
+## Build integration (2026-11-17)
+
+`scripts/build-gop-legacy-display.py` is in `[kernel] archives` and
+`CONFIG_XNU_NATIVE_LEGACY_DISPLAY=y`. The ABI audit needs a prelinked candidate
+of the exact profile, while the kernel step builds the archive before it
+prelinks. The workflow therefore runs `unixnu build kernel` once first: the
+recipe writes a bootstrap archive whose `native_legacy_display_probe` and
+`native_legacy_display_late_probe` are empty, and the prelink pass produces
+`kernel/kernel.macho` + `kernel.json`. The normal package run then rebuilds the
+archive against that reference, relinks the native kernel and prelinks again.
+
+The probe marks its stages on the framebuffer bottom row:
+
+| marker | meaning |
+| --- | --- |
+| 295 | legacy probe entered |
+| 296 | meta-class constructors and `postModLoad` completed |
+| 297 | `PE_current_console` returned a usable 32-bit GOP |
+| 298 | display object `init()` succeeded and was retained for phase 4 |
+| 299 | late probe (end of `bsd_autoconf`) entered |
+| 300 | `IOCoreSurfaceRoot` appeared |
+| 301 | the synthetic `gop-display` nub started |
+| 302 | `NativeLegacyDisplay::start` succeeded |
+| 303 | late-probe failure path |
+
+With phase 4 and `offline-legacy-transfer=1`, the first accepted swap is copied
+into the GOP; the UEFI menu should be replaced by the iPadOS frame.
