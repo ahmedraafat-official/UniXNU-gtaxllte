@@ -17,6 +17,10 @@
 #include <libkern/c++/OSData.h>
 #include <kern/clock.h>
 #include <kern/task.h>
+#include <kern/thread.h>
+
+extern "C" void gtaxllte_fb_mark(unsigned int, unsigned int);
+#include <libkern/crypto/sha2.h>
 
 namespace {
 constexpr uint32_t kPwrEn = 0x04;
@@ -53,6 +57,73 @@ constexpr uint32_t kTransferBytes = 64 * 1024;
 constexpr uint32_t kSectorBytes = 512;
 }  // namespace
 
+class NativeDwMmc;
+
+// One read-only APFS window of the SHNGROOT manifest, exposed as a 512-byte
+// block device on top of the parent's PIO transport. The window starts in a
+// kernel thread after the parent's start() returns, the same ownership order
+// ShengUfs uses to avoid starting a child from inside a parent's start.
+class NativeDwMmcWindow : public IOBlockStorageDevice {
+  OSDeclareDefaultStructors(NativeDwMmcWindow)
+  NativeDwMmc *parent = nullptr;
+  uint64_t firstSector = 0;
+  uint64_t sectorCount = 0;
+  char label[32] = {};
+
+ public:
+  bool configure(NativeDwMmc *owner, uint64_t first, uint64_t count,
+      const char *name);
+  bool start(IOService *provider) override;
+  void stop(IOService *provider) override;
+  void free() override;
+  const char *windowLabel() const { return label; }
+  IOReturn doEjectMedia() override { return kIOReturnUnsupported; }
+  IOReturn doFormatMedia(UInt64) override { return kIOReturnNotWritable; }
+  UInt32 doGetFormatCapacities(UInt64 *, UInt32) const override { return 0; }
+  char *getVendorString() override { return const_cast<char *>("Samsung"); }
+  char *getProductString() override { return const_cast<char *>(label); }
+  char *getRevisionString() override { return const_cast<char *>("1"); }
+  char *getAdditionalDeviceInfoString() override {
+    return const_cast<char *>("SHNGROOT window, MSHC PIO");
+  }
+  IOReturn reportBlockSize(UInt64 *value) override {
+    *value = kSectorBytes;
+    return kIOReturnSuccess;
+  }
+  IOReturn reportEjectability(bool *value) override {
+    *value = false;
+    return kIOReturnSuccess;
+  }
+  IOReturn reportMaxValidBlock(UInt64 *value) override {
+    *value = sectorCount - 1;
+    return kIOReturnSuccess;
+  }
+  IOReturn reportMediaState(bool *present, bool *changed) override {
+    *present = true;
+    if (changed) *changed = false;
+    return kIOReturnSuccess;
+  }
+  IOReturn reportRemovability(bool *value) override {
+    *value = false;
+    return kIOReturnSuccess;
+  }
+  IOReturn reportWriteProtection(bool *value) override {
+    *value = true;
+    return kIOReturnSuccess;
+  }
+  IOReturn doSynchronizeCache() override { return kIOReturnSuccess; }
+  IOReturn doSynchronize(UInt64, UInt64, IOOptionBits) override {
+    return kIOReturnSuccess;
+  }
+  IOReturn getWriteCacheState(bool *value) override {
+    *value = false;
+    return kIOReturnSuccess;
+  }
+  IOReturn setWriteCacheState(bool) override { return kIOReturnUnsupported; }
+  IOReturn doAsyncReadWrite(IOMemoryDescriptor *, UInt64, UInt64,
+      IOStorageAttributes *, IOStorageCompletion *) override;
+};
+
 class NativeDwMmc : public IOBlockStorageDevice {
   OSDeclareDefaultStructors(NativeDwMmc)
   IOMemoryMap *mapping = nullptr;
@@ -62,6 +133,12 @@ class NativeDwMmc : public IOBlockStorageDevice {
   uint32_t fifo = 0;
   uint32_t itemWords = 1;
   bool online = false;
+  struct Window { char name[32]; uint64_t offset; uint64_t size; };
+  Window windows[4];
+  uint32_t windowCount = 0;
+  bool readManifest();
+  bool readWindow(uint64_t sector, uint32_t bytes, IOMemoryDescriptor *buffer,
+      uint64_t bufferOffset);
 
   uint32_t read32(uint32_t offset) const {
     return *reinterpret_cast<volatile uint32_t *>(registers + offset);
@@ -189,7 +266,87 @@ IOReturn NativeDwMmc::readSectors(uint64_t sector, uint32_t bytes) {
   return kIOReturnSuccess;
 }
 
+bool NativeDwMmc::readWindow(uint64_t sector, uint32_t bytes,
+    IOMemoryDescriptor *buffer, uint64_t bufferOffset) {
+  IOLockLock(gate);
+  IOReturn status = readSectors(sector, bytes);
+  bool copied = status == kIOReturnSuccess &&
+      buffer->writeBytes(bufferOffset, transfer->getBytesNoCopy(), bytes) == bytes;
+  IOLockUnlock(gate);
+  return copied;
+}
+
+static uint32_t gtaxllte_le32(const uint8_t *p) {
+  uint32_t value;
+  memcpy(&value, p, sizeof(value));
+  return value;
+}
+
+static uint64_t gtaxllte_le64(const uint8_t *p) {
+  uint64_t value;
+  memcpy(&value, p, sizeof(value));
+  return value;
+}
+
+bool NativeDwMmc::readManifest(void) {
+  if (readSectors(0, 4096) != kIOReturnSuccess) return false;
+  auto *raw = static_cast<uint8_t *>(transfer->getBytesNoCopy());
+  if (memcmp(raw, "SHNGROOT", 8)) return false;
+  uint32_t version = gtaxllte_le32(raw + 8);
+  uint32_t count = gtaxllte_le32(raw + 12);
+  if (!((version == 1 && count >= 1 && count <= 4) ||
+      (version == 2 && count >= 1 && count <= 8))) return false;
+  SHA256_CTX context;
+  uint8_t digest[32];
+  SHA256_Init(&context);
+  SHA256_Update(&context, raw, 4064);
+  SHA256_Final(digest, &context);
+  if (memcmp(digest, raw + 4064, sizeof(digest))) return false;
+  uint64_t limit = kUserDataSectors * kSectorBytes;
+  for (uint32_t index = 0; index < count && windowCount < 4; index++) {
+    const uint8_t *entry = raw + 24 + 128 * index;
+    uint64_t offset = gtaxllte_le64(entry + 32);
+    uint64_t size = gtaxllte_le64(entry + 40);
+    uint32_t blockSize = gtaxllte_le32(entry + 48);
+    uint32_t flags = gtaxllte_le32(entry + 52);
+    if (blockSize != kSectorBytes || flags != 1) continue;
+    if (!size || (offset & (kSectorBytes - 1)) || (size & (kSectorBytes - 1)) ||
+        offset < 4096 || offset >= limit || size > limit - offset) return false;
+    uint32_t length = 0;
+    while (length < 32 && entry[length] >= 0x20 && entry[length] <= 0x7e) {
+      length++;
+    }
+    if (!length || length == 32 || entry[length] != 0) return false;
+    Window &window = windows[windowCount];
+    bzero(&window, sizeof(window));
+    strlcpy(window.name, reinterpret_cast<const char *>(entry),
+        sizeof(window.name));
+    window.offset = offset;
+    window.size = size;
+    windowCount++;
+  }
+  return windowCount != 0;
+}
+
+static void gtaxllte_publish_windows(void *argument, wait_result_t) {
+  auto *owner = static_cast<NativeDwMmc *>(argument);
+  for (uint32_t index = 0; index < owner->windowCount; index++) {
+    auto *window = OSTypeAlloc(NativeDwMmcWindow);
+    if (!window) continue;
+    if (!window->init(nullptr) ||
+        !window->configure(owner, owner->windows[index].offset / kSectorBytes,
+            owner->windows[index].size / kSectorBytes, owner->windows[index].name) ||
+        !window->attach(owner) || !window->start(owner)) {
+      window->release();
+      continue;
+    }
+    gtaxllte_fb_mark(43, 0x00FF00FF);   /* SHNGROOT window service started */
+  }
+  owner->release();
+}
+
 bool NativeDwMmc::start(IOService *provider) {
+  gtaxllte_fb_mark(40, 0x00FF00FF);   /* NativeDwMmc::start */
   if (!IOBlockStorageDevice::start(provider) ||
       provider->getResources() != kIOReturnSuccess) {
     return false;
@@ -210,7 +367,18 @@ bool NativeDwMmc::start(IOService *provider) {
   if (!gate) return false;
   uint8_t first[kSectorBytes];
   if (readBlock(0, first) != kIOReturnSuccess) return false;
+  gtaxllte_fb_mark(41, 0x00FF00FF);   /* first media sector read */
   online = true;
+  if (readManifest()) {
+    gtaxllte_fb_mark(42, 0x00FF00FF);  /* SHNGROOT manifest parsed */
+    retain();
+    thread_t thread = nullptr;
+    if (kernel_thread_start(gtaxllte_publish_windows, this, &thread) == KERN_SUCCESS) {
+      thread_deallocate(thread);
+    } else {
+      release();
+    }
+  }
   registerService();
   return true;
 }
@@ -264,3 +432,57 @@ void NativeDwMmc::free() {
   }
   IOBlockStorageDevice::free();
 }
+
+bool NativeDwMmcWindow::configure(NativeDwMmc *owner, uint64_t first,
+    uint64_t count, const char *name) {
+  if (!owner || !count || first + count > kUserDataSectors) return false;
+  parent = owner;
+  firstSector = first;
+  sectorCount = count;
+  strlcpy(label, name, sizeof(label));
+  setProperty("SHNGROOTWindow", label);
+  return true;
+}
+
+bool NativeDwMmcWindow::start(IOService *provider) {
+  if (!parent || !IOBlockStorageDevice::start(provider)) return false;
+  registerService();
+  return true;
+}
+
+void NativeDwMmcWindow::stop(IOService *provider) {
+  IOBlockStorageDevice::stop(provider);
+}
+
+void NativeDwMmcWindow::free() {
+  parent = nullptr;
+  IOBlockStorageDevice::free();
+}
+
+IOReturn NativeDwMmcWindow::doAsyncReadWrite(IOMemoryDescriptor *buffer,
+    UInt64 block, UInt64 count, IOStorageAttributes *,
+    IOStorageCompletion *completion) {
+  if (!buffer || !completion || !completion->action || !count ||
+      block >= sectorCount || count > sectorCount - block ||
+      count > UINT64_MAX / kSectorBytes ||
+      buffer->getLength() < count * kSectorBytes) {
+    return kIOReturnBadArgument;
+  }
+  if (buffer->getDirection() != kIODirectionIn) return kIOReturnNotWritable;
+  uint64_t actual = 0;
+  IOReturn result = kIOReturnNotReady;
+  while (actual < count * kSectorBytes) {
+    uint64_t left = count * kSectorBytes - actual;
+    uint32_t bytes = static_cast<uint32_t>(left > kTransferBytes ? kTransferBytes : left);
+    if (!parent->readWindow(firstSector + (block + actual / kSectorBytes),
+        bytes, buffer, actual)) {
+      result = kIOReturnIOError;
+      break;
+    }
+    actual += bytes;
+  }
+  if (actual == count * kSectorBytes) result = kIOReturnSuccess;
+  completion->action(completion->target, completion->parameter, result, actual);
+  return kIOReturnSuccess;
+}
+OSDefineMetaClassAndStructors(NativeDwMmcWindow, IOBlockStorageDevice)
