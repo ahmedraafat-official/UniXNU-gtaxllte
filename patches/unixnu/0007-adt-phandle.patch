@@ -1,16 +1,19 @@
 diff --git a/scripts/unixnu/devicetree.py b/scripts/unixnu/devicetree.py
 index 0000000..0000000 100644
---- a2/scripts/unixnu/devicetree.py	2026-11-17 20:11:54
-+++ b/scripts/unixnu/devicetree.py	2026-11-17 20:11:54
-@@ -216,6 +216,11 @@
+--- a2/scripts/unixnu/devicetree.py	2026-11-17 20:28:48
++++ b/scripts/unixnu/devicetree.py	2026-11-17 20:28:48
+@@ -216,7 +216,13 @@
              entry.strings(key)
              properties.append((key, raw))
          elif key in U32:
+-            properties.append((key, struct.pack('<I', entry.scalar(key))))
++            value = struct.pack('<I', entry.scalar(key))
 +            # XNU's IODT support indexes interrupt parents by AAPL,phandle;
 +            # a plain phandle never enters gIODTPHandles and IODTFindInterruptParent
 +            # returns NULL for the first node with an interrupts property.
 +            if key == 'phandle':
 +                key = 'AAPL,phandle'
-             properties.append((key, struct.pack('<I', entry.scalar(key))))
++            properties.append((key, value))
          elif key in U64:
              cells = entry.cells(key)
+             if len(cells) not in (1, 2):

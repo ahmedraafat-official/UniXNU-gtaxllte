@@ -21,7 +21,7 @@ findings = [
   "The board now carries the measured USERDATA geometry (first 8013824, last 61057023, 512-byte sectors) with the OS/SystemOS SHNGROOT windows, the OS volume UUID 04769D26-2CA0-4825-B443-E2E5F88300F2, and the same UUID as the ADT root match. The userdata image build and flash are separate from the kernel build.",
   "The package workflow takes a userdata boolean: when set it builds the OS/SystemOS root image before the kernel package step and uploads userdata-root.img separately, so the kernel artifact is unaffected by the optional image build.",
   "The ADT generator dropped #address-cells/#size-cells from hardware nodes. That was invisible until the first node with an interrupts property (dwmmc0) made IODTMapInterruptsSharing call IODTGetICellCounts on the GIC; the missing cell count faulted in IODeviceTreeAlloc. Patch 0006 adds both properties to the generated ADT.",
-  "The GIC phandle was emitted as phandle, but XNU's IODT support indexes interrupt parents by AAPL,phandle. IODTFindInterruptParent returned NULL and IODTGetICellCounts(NULL) faulted. Patch 0007 renames the generated hardware phandle to AAPL,phandle.",
+  "The GIC phandle was emitted as phandle, but XNU's IODT support indexes interrupt parents by AAPL,phandle. IODTFindInterruptParent returned NULL and IODTGetICellCounts(NULL) faulted. Patch 0007 renames the generated hardware phandle to AAPL,phandle; the value is packed from the FDT's phandle before the output key changes, since the FDT has no AAPL,phandle property to read.",
 ]
 completion = ["All source pins resolve; every selected component has a record; status shows the intended overrides and patch order."]
 limits = ["Hardware inputs and implementation are pending for this example board."]
