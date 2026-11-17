@@ -340,13 +340,13 @@ static void gtaxllte_publish_windows(void *argument, wait_result_t) {
       window->release();
       continue;
     }
-    gtaxllte_fb_mark(43, 0x00FF00FF);   /* SHNGROOT window service started */
+    gtaxllte_fb_mark(273, 0x00FF00FF);  /* SHNGROOT window service started */
   }
   owner->release();
 }
 
 bool NativeDwMmc::start(IOService *provider) {
-  gtaxllte_fb_mark(40, 0x00FF00FF);   /* NativeDwMmc::start */
+  gtaxllte_fb_mark(270, 0x00FF00FF);  /* NativeDwMmc::start */
   if (!IOBlockStorageDevice::start(provider) ||
       provider->getResources() != kIOReturnSuccess) {
     return false;
@@ -367,10 +367,10 @@ bool NativeDwMmc::start(IOService *provider) {
   if (!gate) return false;
   uint8_t first[kSectorBytes];
   if (readBlock(0, first) != kIOReturnSuccess) return false;
-  gtaxllte_fb_mark(41, 0x00FF00FF);   /* first media sector read */
+  gtaxllte_fb_mark(271, 0x00FF00FF);  /* first media sector read */
   online = true;
   if (readManifest()) {
-    gtaxllte_fb_mark(42, 0x00FF00FF);  /* SHNGROOT manifest parsed */
+    gtaxllte_fb_mark(272, 0x00FF00FF);  /* SHNGROOT manifest parsed */
     retain();
     thread_t thread = nullptr;
     if (kernel_thread_start(gtaxllte_publish_windows, this, &thread) == KERN_SUCCESS) {
