@@ -520,16 +520,16 @@ void native_legacy_display_probe(void) {
     // reach this boot-thread entry. Run class constructors only once; a second
     // postModLoad would attempt to register the same metaclasses again.
     if(native_legacy_stage)return;
-    native_legacy_stage=1;gtaxllte_fb_mark(300,0x00FFFF00);void *handle=OSMetaClass::preModLoad(g_kernel_kmod_info.name);
+    native_legacy_stage=1;gtaxllte_fb_mark(295,0x00FFFF00);void *handle=OSMetaClass::preModLoad(g_kernel_kmod_info.name);
     if(!handle){native_legacy_display_checkpoint();return;}
     native_legacy_display_static_init();native_gop_presenter_static_init();native_legacy_meta_status=OSMetaClass::postModLoad(handle);
     if(native_legacy_meta_status){native_legacy_display_checkpoint();return;}
-    gtaxllte_fb_mark(301,0x0000FF00);
+    gtaxllte_fb_mark(296,0x0000FF00);
     PE_Video video={};native_legacy_stage=2;
     if(PE_current_console(&video) || !video.v_baseAddr || !video.v_width || !video.v_height || video.v_depth!=32
         || video.v_rotate || video.v_width>16384 || video.v_height>16384 || video.v_rowBytes<video.v_width*4
         || video.v_rowBytes>UINT64_MAX/video.v_height){native_legacy_display_checkpoint();return;}
-    gtaxllte_fb_mark(302,0x0000FFFF);
+    gtaxllte_fb_mark(297,0x0000FFFF);
     IOService *display=native_legacy_display_allocate();native_legacy_object=(uintptr_t)display;
     if(!display){native_legacy_display_checkpoint();return;}
     native_legacy_object_size=display->getMetaClass()->getClassSize();
@@ -539,7 +539,7 @@ void native_legacy_display_probe(void) {
     if(native_legacy_init_result && (phase==2 || phase==3 || phase==4)) {
         // IOSurface matches the real IOBSD resource, published by bsd_autoconf.
         // Retain this actual object until that normal lifecycle boundary.
-        gtaxllte_fb_mark(303,0x00FF00FF);pendingLegacyDisplay=display;return;
+        gtaxllte_fb_mark(298,0x00FF00FF);pendingLegacyDisplay=display;return;
     }
     native_legacy_stage=7;display->release();native_legacy_released=1;native_legacy_stage=8;
     native_legacy_display_checkpoint();
@@ -557,12 +557,12 @@ void native_legacy_display_late_probe(void);
 // are not in this board's archive.
 void native_legacy_display_late_probe(void) {
     IOService *display=pendingLegacyDisplay;if(!display)return;pendingLegacyDisplay=nullptr;
-    gtaxllte_fb_mark(304,0x00FF8000);
+    gtaxllte_fb_mark(299,0x00FF8000);
     native_legacy_surface_status=OSKextLoadKextWithIdentifier("com.apple.iokit.IOSurface");
     OSDictionary *matching=IOService::nameMatching("IOCoreSurfaceRoot");
     IOService *surface=matching?IOService::waitForMatchingService(matching,5000000000ULL):nullptr;
     native_legacy_surface_found=surface!=nullptr;OSSafeReleaseNULL(surface);OSSafeReleaseNULL(matching);
-    if(native_legacy_surface_found)gtaxllte_fb_mark(305,0x00FF0000);
+    if(native_legacy_surface_found)gtaxllte_fb_mark(300,0x00FF0000);
     PE_Video video={};
     if(!native_legacy_surface_status && native_legacy_surface_found && !PE_current_console(&video)
         && video.v_baseAddr && video.v_width && video.v_height && video.v_depth==32
@@ -581,7 +581,7 @@ void native_legacy_display_late_probe(void) {
         if(nub && memory && ranges && parent && nub->init()) {
             ranges->setObject(memory);nub->setDeviceMemory(ranges);nub->setName("NativeGOPFramebuffer");
             nubAttached=nub->attach(parent);if(nubAttached)nubStarted=nub->start(parent);
-            if(nubStarted)gtaxllte_fb_mark(306,0x008000FF);
+            if(nubStarted)gtaxllte_fb_mark(301,0x008000FF);
             if(nubStarted) {
                 unsigned phase=0;PE_parse_boot_argn("offline-legacy-phase",&phase,sizeof(phase));
                 if(phase==4) {
@@ -605,7 +605,7 @@ void native_legacy_display_late_probe(void) {
                 } else {
                     SInt32 score=0;native_legacy_probe_match=(phase!=4 || dtAttached) && display->probe(nub,&score)==display;
                     if(native_legacy_probe_match)attached=display->attach(nub);
-                    if(attached){native_legacy_stage=5;started=display->start(nub);native_legacy_start_result=started;if(started)gtaxllte_fb_mark(307,0x0000FF00);}
+                    if(attached){native_legacy_stage=5;started=display->start(nub);native_legacy_start_result=started;if(started)gtaxllte_fb_mark(302,0x0000FF00);}
                     if(started && phase==4) {
                         activeLegacyDisplay=display;activeGOPNub=nub;native_legacy_stage=10;
                         {
@@ -635,7 +635,7 @@ void native_legacy_display_late_probe(void) {
         OSSafeReleaseNULL(ranges);OSSafeReleaseNULL(memory);OSSafeReleaseNULL(nub);
         OSSafeReleaseNULL(displayTreeParent);
     }
-    native_legacy_stage=7;gtaxllte_fb_mark(308,0x00FF0000);display->release();native_legacy_released=1;native_legacy_stage=8;
+    native_legacy_stage=7;gtaxllte_fb_mark(303,0x00FF0000);display->release();native_legacy_released=1;native_legacy_stage=8;
     native_legacy_display_checkpoint();
 }
 }
