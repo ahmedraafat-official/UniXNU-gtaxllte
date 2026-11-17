@@ -133,11 +133,11 @@ class NativeDwMmc : public IOBlockStorageDevice {
   uint32_t fifo = 0;
   uint32_t itemWords = 1;
   bool online = false;
+ public:
   struct Window { char name[32]; uint64_t offset; uint64_t size; };
   Window windows[4];
   uint32_t windowCount = 0;
   bool readManifest();
- public:
   bool readWindow(uint64_t sector, uint32_t bytes, IOMemoryDescriptor *buffer,
       uint64_t bufferOffset);
 
