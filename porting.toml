@@ -24,6 +24,7 @@ findings = [
   "The GIC phandle was emitted as phandle, but XNU's IODT support indexes interrupt parents by AAPL,phandle. IODTFindInterruptParent returned NULL and IODTGetICellCounts(NULL) faulted. Patch 0007 renames the generated hardware phandle to AAPL,phandle; the value is packed from the FDT's phandle before the output key changes, since the FDT has no AAPL,phandle property to read.",
   "With the phandle fixed the kernel reached bsd_init and stayed in its root-mount retry loop with no panic: vfs_mountroot returned an error that the console cannot show. The diagnostic now paints attempts 283-286 and panics on the third failure with the errno and rootdevice, while the MC window reader marks the first APFS read and any failed window read.",
   "The first root-probe build failed the bootstrap kernel pass on an implicit gtaxllte_fb_mark declaration, which then stopped the corecrypto archive with 'No XNU symbol names'. The probe declares the helper before use; device patches that call a kernel helper must carry their own extern.",
+  "The root-mount probe shows no third-attempt panic after several minutes, so vfs_mountroot is either succeeding or blocking. The boot now paints 290 after a successful mount, 291 after set_rootvnode and 292 before load_init_program, so the next photo distinguishes a mounted root from a wait.",
 ]
 completion = ["All source pins resolve; every selected component has a record; status shows the intended overrides and patch order."]
 limits = ["Hardware inputs and implementation are pending for this example board."]
