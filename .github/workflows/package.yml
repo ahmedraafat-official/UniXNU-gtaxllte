@@ -103,6 +103,7 @@ jobs:
           git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0003-payload-fat16.patch"
           git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0004-xnu-native-dwmmc.patch"
           git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0005-adt-before-strip.patch"
+          git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0006-adt-cells.patch"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
