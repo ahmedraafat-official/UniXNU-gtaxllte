@@ -22,6 +22,7 @@ findings = [
   "The package workflow takes a userdata boolean: when set it builds the OS/SystemOS root image before the kernel package step and uploads userdata-root.img separately, so the kernel artifact is unaffected by the optional image build.",
   "The ADT generator dropped #address-cells/#size-cells from hardware nodes. That was invisible until the first node with an interrupts property (dwmmc0) made IODTMapInterruptsSharing call IODTGetICellCounts on the GIC; the missing cell count faulted in IODeviceTreeAlloc. Patch 0006 adds both properties to the generated ADT.",
   "The GIC phandle was emitted as phandle, but XNU's IODT support indexes interrupt parents by AAPL,phandle. IODTFindInterruptParent returned NULL and IODTGetICellCounts(NULL) faulted. Patch 0007 renames the generated hardware phandle to AAPL,phandle; the value is packed from the FDT's phandle before the output key changes, since the FDT has no AAPL,phandle property to read.",
+  "With the phandle fixed the kernel reached bsd_init and stayed in its root-mount retry loop with no panic: vfs_mountroot returned an error that the console cannot show. The diagnostic now paints attempts 283-286 and panics on the third failure with the errno and rootdevice, while the MC window reader marks the first APFS read and any failed window read.",
 ]
 completion = ["All source pins resolve; every selected component has a record; status shows the intended overrides and patch order."]
 limits = ["Hardware inputs and implementation are pending for this example board."]

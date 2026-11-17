@@ -1,0 +1,23 @@
+--- a/bsd/kern/bsd_init.c	2026-11-17 20:59:24
++++ b/bsd/kern/bsd_init.c	2026-11-17 20:59:24
+@@ -1173,6 +1173,7 @@
+ 	/* Mount the root file system. */
+ 	while (TRUE) {
+ 		int err;
++		static int gtaxllte_mount_attempts = 0;
+ 
+ 		bsd_init_kprintf("calling setconf\n");
+ 		setconf();
+@@ -1184,6 +1185,12 @@
+ 		if (0 == (err = vfs_mountroot())) {
+ 			break;
+ 		}
++		gtaxllte_mount_attempts++;
++		gtaxllte_fb_mark(283 + (gtaxllte_mount_attempts & 3), 0x00FFFFFF);
++		if (gtaxllte_mount_attempts >= 3) {
++			panic("gtaxllte mountroot try=%d err=%d rootdev=%s",
++			    gtaxllte_mount_attempts, err, rootdevice);
++		}
+ 		rootdevice[0] = '\0';
+ #if CONFIG_NETBOOT
+ 		if (netboot) {

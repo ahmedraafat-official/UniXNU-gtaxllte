@@ -463,6 +463,7 @@ void NativeDwMmcWindow::free() {
 IOReturn NativeDwMmcWindow::doAsyncReadWrite(IOMemoryDescriptor *buffer,
     UInt64 block, UInt64 count, IOStorageAttributes *,
     IOStorageCompletion *completion) {
+  gtaxllte_fb_mark(274, 0x00FF00FF);   /* APFS/IOStorage read the window */
   if (!buffer || !completion || !completion->action || !count ||
       block >= sectorCount || count > sectorCount - block ||
       count > UINT64_MAX / kSectorBytes ||
@@ -477,6 +478,7 @@ IOReturn NativeDwMmcWindow::doAsyncReadWrite(IOMemoryDescriptor *buffer,
     uint32_t bytes = static_cast<uint32_t>(left > kTransferBytes ? kTransferBytes : left);
     if (!parent->readWindow(firstSector + (block + actual / kSectorBytes),
         bytes, buffer, actual)) {
+      gtaxllte_fb_mark(275, 0x00FF00FF);   /* window read failed */
       result = kIOReturnIOError;
       break;
     }

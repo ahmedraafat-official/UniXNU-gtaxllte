@@ -10,3 +10,4 @@ zzz-boot-trace.patch
 zzz-emmc-early.patch
 zzz-native-dwmmc-personality.patch
 zzz-max-cpus.patch
+zzz-root-probe.patch
