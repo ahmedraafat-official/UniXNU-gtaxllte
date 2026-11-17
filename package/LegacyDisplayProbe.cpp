@@ -292,6 +292,7 @@ void native_legacy_swap_validation_observed(bool accepted,unsigned reason,const 
     if(accepted)native_legacy_swap_stage(0);
     if(accepted)native_legacy_swap_accepted_count=native_legacy_swap_accepted_count+1;
     else {native_legacy_swap_rejected_count=native_legacy_swap_rejected_count+1;recordRejectedSwap(reason,request,surface);}
+    if(accepted && native_legacy_swap_accepted_count==1)gtaxllte_fb_mark(305,0x00FFFFFF);
     native_legacy_swap_validation_calls=native_legacy_swap_validation_calls+1;
     native_legacy_swap_validation_result=accepted;native_legacy_swap_validation_reason=reason;
     native_legacy_swap_request=(uintptr_t)request;native_legacy_swap_surface=(uintptr_t)surface;
@@ -349,6 +350,7 @@ extern "C" unsigned native_legacy_properties_now(char *out,unsigned cap) {
 }
 void native_legacy_registration_observed(IOService *display) {
     native_legacy_registration_calls=native_legacy_registration_calls+1;
+    gtaxllte_fb_mark(304,0x00FFFFFF);
     OSSerialize *xml=OSSerialize::withCapacity(2048);
     if(xml && display->serializeProperties(xml)) {
         unsigned size=xml->getLength();if(size>=sizeof(native_legacy_properties))size=sizeof(native_legacy_properties)-1;
