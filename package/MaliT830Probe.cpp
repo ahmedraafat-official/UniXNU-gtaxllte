@@ -10,7 +10,7 @@
 
 namespace {
 constexpr uint64_t kG3dPdBase = 0x10484000;
-constexpr uint64_t kCmuBase = 0x10460000;
+constexpr uint64_t kCmuBase = 0x11460000;
 constexpr uint64_t kGpuBase = 0x11400000;
 
 struct Mapped {
@@ -55,9 +55,10 @@ extern "C" void native_mali_t830_probe(void)
     Mapped cmu = map_words(kCmuBase, 0x4000);
     uint32_t pd_status = word(pd, 0x04);
     uint32_t pd_control = word(pd, 0x00);
-    uint32_t cmu0 = word(cmu, 0x0000);
-    uint32_t cmu1 = word(cmu, 0x1000);
-    uint32_t cmu2 = word(cmu, 0x2000);
+    uint32_t cmu_mux = word(cmu, 0x0208);
+    uint32_t cmu_div = word(cmu, 0x0400);
+    uint32_t cmu_gate = word(cmu, 0x0804);
+    uint32_t cmu_gate2 = word(cmu, 0x0808);
 
     Mapped gpu = {};
     uint32_t gpu_id = 0xffffffffU, gpu_version = 0xffffffffU, gpu_status = 0xffffffffU;
@@ -68,7 +69,7 @@ extern "C" void native_mali_t830_probe(void)
         gpu_status = word(gpu, 0x08);
     }
 
-    panic("Mali-T830 probe: pd=%08x/%08x cmu=%08x/%08x/%08x gpu=%08x ver=%08x st=%08x",
-          pd_control, pd_status, cmu0, cmu1, cmu2,
+    panic("Mali-T830 probe: pd=%08x/%08x cmu_mux=%08x div=%08x gate=%08x/%08x gpu=%08x ver=%08x st=%08x",
+          pd_control, pd_status, cmu_mux, cmu_div, cmu_gate, cmu_gate2,
           gpu_id, gpu_version, gpu_status);
 }
