@@ -167,7 +167,13 @@ jobs:
           python3 ../unixnu/unixnu defconfig gtaxllte_defconfig -D . --os "${{ inputs.os }}"
           python3 ../unixnu/unixnu build kernel -D . --os "${{ inputs.os }}"
           test -n "$(find ../unixnu/out/gtaxllte -path '*/kernel/kernel.macho' -print -quit)"
-      - name: package
+      - name: final display kernel
+        # The reference kernel above carries the bootstrap display stubs. Build
+        # the kernel again now that the real display archive can be audited
+        # against that reference, and link the final prelinked image. The
+        # payload stage is built separately below with the Data seed and trust
+        # bundle; the release command's payload check must not run here.
+        if: ${{ inputs.prelink }}
         working-directory: device
         env:
           UNIXNU_UNIQUE_CHIP_ID: ${{ secrets.UNIXNU_UNIQUE_CHIP_ID }}
@@ -175,11 +181,17 @@ jobs:
           IASL_PREFIX: /opt/homebrew/bin/
           UNIXNU_DTB: ../uefi-gtaxllte/Resources/DTBs/gtaxllte.dtb
         run: |
-          if [ "${{ inputs.prelink }}" = "true" ]; then
-            scripts/package.sh --os "${{ inputs.os }}" --uefi ../uefi-gtaxllte --edk2 ../uefi-gtaxllte/Mu_Basecore
-          else
-            scripts/package.sh --os "${{ inputs.os }}" --uefi ../uefi-gtaxllte --edk2 ../uefi-gtaxllte/Mu_Basecore --skip-prelink
-          fi
+          python3 ../unixnu/unixnu build kernel -D . --os "${{ inputs.os }}"
+      - name: package
+        if: ${{ !inputs.prelink }}
+        working-directory: device
+        env:
+          UNIXNU_UNIQUE_CHIP_ID: ${{ secrets.UNIXNU_UNIQUE_CHIP_ID }}
+          GITHUB_TOKEN: ${{ github.token }}
+          IASL_PREFIX: /opt/homebrew/bin/
+          UNIXNU_DTB: ../uefi-gtaxllte/Resources/DTBs/gtaxllte.dtb
+        run: |
+          scripts/package.sh --os "${{ inputs.os }}" --uefi ../uefi-gtaxllte --edk2 ../uefi-gtaxllte/Mu_Basecore --skip-prelink
       - name: bring-up payload
         # The package step stops at strip on the 49 MiB prelinked Mach-O. Build
         # the payload stage separately with the committed Data seed and the

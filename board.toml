@@ -173,7 +173,9 @@ kernel_args = [
 # Draw the XNU entry bars and a panic screen on the firmware framebuffer. The
 # tablet has no accessible UART, so this is the M2 log route.
 panic_screen = true
-strip = true
+# The prelinked Mach-O's string table cannot be stripped; the payload stage is
+# loaded from HIDDEN, not the 14 MiB ramdisk, so the strip step is unused.
+strip = false
 
 [package]
 unixnu = "../unixnu"
