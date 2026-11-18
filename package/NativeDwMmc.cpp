@@ -23,6 +23,7 @@
 #include <kern/clock.h>
 #include <kern/task.h>
 #include <kern/thread.h>
+#include <mach/vm_types.h>
 #include <pexpert/pexpert.h>
 #include <sys/param.h>
 #include <sys/types.h>
@@ -647,3 +648,16 @@ extern "C" int native_verified_block_manifest_sha384(dev_t device, const char *u
   SHA384_Final(digest, &context);
   return 1;
 }
+
+// NativeRamBlock's persistence hooks are optional weak imports. This board has
+// no UFS store window yet, so the volatile packed Data seed is the only mode;
+// provide the no-store answers directly instead of pulling NativeUfs in. The
+// loader-memory release is likewise absent in this prelinked kernel.
+extern "C" bool ml_static_mfree_prepare(vm_offset_t, vm_size_t) { return false; }
+extern "C" unsigned native_ufs_store_mode(void) { return 0; }
+extern "C" int native_ufs_store_open(uint64_t, uint64_t *, const char **) { return 0; }
+extern "C" int native_ufs_store_read(uint64_t, uint32_t, void *) { return 0; }
+extern "C" int native_ufs_store_write(uint64_t, uint32_t, const void *) { return 0; }
+extern "C" int native_ufs_store_write_cached(uint64_t, uint32_t, const void *) { return 0; }
+extern "C" int native_ufs_store_sync(void) { return 0; }
+extern "C" unsigned native_ufs_store_gpt_check(void) { return 0; }
