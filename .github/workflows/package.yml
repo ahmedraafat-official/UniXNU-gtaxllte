@@ -179,6 +179,16 @@ jobs:
           else
             scripts/package.sh --os "${{ inputs.os }}" --uefi ../uefi-gtaxllte --edk2 ../uefi-gtaxllte/Mu_Basecore --skip-prelink
           fi
+      - name: build logs
+        # The archive and kernel logs hold the full compiler diagnostics when a
+        # build step fails; the GitHub step log can truncate long compile output.
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          retention-days: 1
+          if-no-files-found: warn
+          path: unixnu/out/gtaxllte/*/*/logs/*.log
       - name: display kernel audit
         # The first kernel pass carries only the bootstrap probe archive; make
         # sure the artifact is the rebuilt kernel, not that reference, before
