@@ -106,6 +106,7 @@ jobs:
           git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0005-adt-before-strip.patch"
           git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0006-adt-cells.patch"
           git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0007-adt-phandle.patch"
+          git -C unixnu apply "$GITHUB_WORKSPACE/device/patches/unixnu/0008-owner-data-bringup.patch"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -179,6 +180,22 @@ jobs:
           else
             scripts/package.sh --os "${{ inputs.os }}" --uefi ../uefi-gtaxllte --edk2 ../uefi-gtaxllte/Mu_Basecore --skip-prelink
           fi
+      - name: bring-up payload
+        # The package step stops at strip on the 49 MiB prelinked Mach-O. Build
+        # the payload stage separately with the committed Data seed and the
+        # original static+System trust bundle, so the HIDDEN image carries the
+        # exact kernel.macho, ADT, trust cache, seed and menu config.
+        if: ${{ always() && inputs.prelink }}
+        working-directory: device
+        env:
+          UNIXNU_UNIQUE_CHIP_ID: ${{ secrets.UNIXNU_UNIQUE_CHIP_ID }}
+          GITHUB_TOKEN: ${{ github.token }}
+          IASL_PREFIX: /opt/homebrew/bin/
+          UNIXNU_DTB: ../uefi-gtaxllte/Resources/DTBs/gtaxllte.dtb
+        run: |
+          python3 ../unixnu/unixnu build payload -D . --os "${{ inputs.os }}" --uefi ../uefi-gtaxllte \
+            --data-ramdisk data/owner-data-8g.dbr \
+            --trust-cache data/original-static-system.bundle
       - name: build logs
         # The archive and kernel logs hold the full compiler diagnostics when a
         # build step fails; the GitHub step log can truncate long compile output.
@@ -248,6 +265,9 @@ jobs:
             unixnu/out/gtaxllte/*/*/kernel/kernel.macho
             unixnu/out/gtaxllte/*/*/payload/stage/EFI/UniXNU/Payloads/kernel.macho
             unixnu/out/gtaxllte/*/*/payload/stage/EFI/UniXNU/Payloads/kernel.macho.adt
+            unixnu/out/gtaxllte/*/*/payload/stage/EFI/UniXNU/Payloads/kernel.macho.trustcache
+            unixnu/out/gtaxllte/*/*/payload/stage/EFI/UniXNU/Payloads/scratch-data.img
+            unixnu/out/gtaxllte/*/*/payload/stage/EFI/UniXNU/unixnu.toml
             unixnu/out/gtaxllte/*/*/kernel/kernel.json
             unixnu/out/gtaxllte/*/*/kernel/kernel.map.json
       - name: userdata artifact

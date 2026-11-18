@@ -1,0 +1,27 @@
+--- a/scripts/build-xnu-4k-baseline.sh
++++ b/scripts/build-xnu-4k-baseline.sh
+@@ -219,8 +219,11 @@
+   exit 1
+ fi
+ # With source storage the RAM disk is part of the source storage archive, which also starts it.
++# gtaxllte: NativeDwMmc is the qualified original-storage transport; its
++# volatile packed seed path needs no NativeAES class, and the persistent store
++# hooks stay weak/absent until a board provides them.
+ if [ "$NATIVE_RAM_BLOCK" = 1 ] && [ "${XNU_SOURCE_STORAGE:-0}" != 1 ]; then
+-  if [ "${XNU_NATIVE_AES:-0}" != 1 ]; then
++  if [ "${XNU_NATIVE_AES:-0}" != 1 ] && [ "${XNU_NATIVE_DWMMC:-0}" != 1 ]; then
+     echo 'NativeRamBlock requires the qualified original storage/AES prelink closure' >&2
+     exit 1
+   fi
+@@ -395,7 +398,10 @@
+   echo 'XNU_OWNER_CACHE_MOUNT must be 0 or 1' >&2
+   exit 1
+ fi
+-if [ "$OWNER_CACHE_MOUNT" = 1 ] && [ "$OWNER_ROOT_TRUST" != 1 ]; then
++# gtaxllte bring-up: the signed OS/SystemOS owner policies are not built yet.
++# The original mount code still asks NativeDwMmc for the SHNGROOT windows, and
++# the driver refuses every device unless gtaxllte-allow-unverified=1 is present.
++if [ "$OWNER_CACHE_MOUNT" = 1 ] && [ "$OWNER_ROOT_TRUST" != 1 ] && [ "$NATIVE_RAM_BLOCK" != 1 ]; then
+   echo 'The offline SystemOS mount requires real independent owner root enforcement' >&2
+   exit 1
+ fi

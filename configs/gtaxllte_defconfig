@@ -14,6 +14,19 @@ CONFIG_XNU_CRYPTO_BOOTSTRAP="prelinked"
 # root mount after the kernel entry checkpoint.
 # CONFIG_XNU_NATIVE_UFS is not set
 CONFIG_XNU_NATIVE_DWMMC=y
+# The packed Data seed published by the loader as a RAM block device. The
+# owner cache/Data mounts use the original XNU mount code; NativeDwMmc answers
+# its block-device hooks from the SHNGROOT windows under an explicit bring-up
+# boot argument (gtaxllte-allow-unverified=1).
+CONFIG_XNU_NATIVE_RAM_BLOCK=y
+CONFIG_XNU_OWNER_CACHE_MOUNT=y
+CONFIG_XNU_OWNER_CACHE_STARTUP=y
+CONFIG_XNU_OWNER_BOOT_MANIFEST=y
+CONFIG_XNU_OWNER_DATA_MOUNT=y
+CONFIG_XNU_OWNER_UNION_SYSTEMOS=y
+CONFIG_XNU_OWNER_CACHE_VOLUME_UUID="8846FE78-2910-4297-AF97-D59BB6F8FC16"
+CONFIG_XNU_OWNER_DATA_VOLUME_UUID="76BACD4A-80F1-48F0-B5B6-5A3DE1F123A5"
+CONFIG_XNU_TRUST_CACHE_RUNTIME=y
 # The GOP/flat-panel legacy backend: the original IOMobileGraphicsFamily
 # lifecycle with an owned framebuffer backend, CPU presentation and the
 # firmware GOP as scanout. It needs the prelinked family closure in board.toml.

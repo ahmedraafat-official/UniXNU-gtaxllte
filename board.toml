@@ -39,6 +39,7 @@ archives = [
   "build-libpthread-kernel.py",
   "build-native-dwmmc.py",
   "build-storage-bindings.py --component NativeDwMmc --archive libNativeDwMmc.a",
+  "build-arm-driver.py RamBlock",
   "build-gop-legacy-display.py",
 ]
 # The shared ARM64 fragment selects ArmCpu and the architectural timer. The
@@ -161,6 +162,10 @@ kernel_args = [
   "offline-legacy-validate=1",
   "offline-legacy-transfer=1",
   "offline-legacy-cpu-present=1",
+  # The signed OS/SystemOS owner policies are not built yet. The original XNU
+  # cache/Data mount code runs against the two SHNGROOT windows and the packed
+  # Data seed only when this explicit bring-up argument is present.
+  "gtaxllte-allow-unverified=1",
   # The GOP has no vblank interrupt: a 60 Hz work-loop tick stands in for it.
   "sheng-vsync=60",
   "sheng-vsync-fixed=1",
@@ -188,3 +193,6 @@ unique_chip_id = "required"
 owned_memory_size = "0x1C000000"
 # The OS volume inside the SHNGROOT OS window; the root mount waits for this UUID.
 root_match_volume_uuid = "04769D26-2CA0-4825-B443-E2E5F88300F2"
+# The Data seed is the packed 8 GiB APFS volume generated from the OS image's
+# initial /private/var tree; the loader publishes it as PackedRAMDisk.
+packed_data_ramdisk = true
