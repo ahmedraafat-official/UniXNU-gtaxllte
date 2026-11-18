@@ -24,7 +24,7 @@ kit = "gtaxllte"
 # and four of its method slots point into unmapped prelink space and the kernel
 # panics in OSMetaClass::postModLoad. Revisit when a prelinked payload fits BOOT
 # or the kext collection is mapped by the native kernel.
-include = ["ArmDTPlatform", "ArmCpu", "XnuPrelink", "DarwinBoot", "GopFramebuffer"]
+include = ["ArmDTPlatform", "ArmCpu", "RamBlock", "XnuPrelink", "DarwinBoot", "GopFramebuffer"]
 
 [kernel]
 defconfig = "gtaxllte_defconfig"
@@ -40,6 +40,7 @@ archives = [
   "build-native-dwmmc.py",
   "build-storage-bindings.py --component NativeDwMmc --archive libNativeDwMmc.a",
   "build-arm-driver.py RamBlock",
+  "build-storage-bindings.py --component NativeRamBlock --archive libRamBlock.a --directory build/ram-block",
   "build-gop-legacy-display.py",
 ]
 # The shared ARM64 fragment selects ArmCpu and the architectural timer. The
