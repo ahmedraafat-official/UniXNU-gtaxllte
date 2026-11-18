@@ -39,7 +39,7 @@ archives = [
   "build-libpthread-kernel.py",
   "build-native-dwmmc.py",
   "build-storage-bindings.py --component NativeDwMmc --archive libNativeDwMmc.a",
-  "build-arm-driver.py RamBlock",
+  "component:RamBlock",
   "build-storage-bindings.py --component NativeRamBlock --archive libRamBlock.a --directory build/ram-block",
   "build-gop-legacy-display.py",
 ]
