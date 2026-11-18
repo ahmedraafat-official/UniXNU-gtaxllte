@@ -182,3 +182,15 @@ rebuilds the real archive and prelinks the final kernel.
 
 The display probe marks stages 295-303 on the framebuffer bottom row, after the
 storage (270-275) and root (290-292) markers.
+
+## Display driver registered on hardware (2026-11-18)
+
+The late-probe display kernel (commit `3ba51af`) prepares and starts
+`NativeLegacyDisplay` on the SM-T585 and publishes the
+`IOMobileFramebuffer` service. The full-width stage bars show the path through
+`startHardware`, `start` and `registerService`; the failure bar is absent and
+the first compositor swap bar has not appeared.
+
+The panel remains on the loader menu because the userland render server is not
+running: the static trust cache and the Data/SystemOS startup are the next
+inputs. The kernel display port itself is device-verified.

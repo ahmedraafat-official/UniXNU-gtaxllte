@@ -113,7 +113,7 @@ evidence = [
 
 [[area]]
 id = "display"
-status = "implemented"
+status = "device-verified"
 components = ["GopFramebuffer"]
 paths = ["drivers/GopFramebuffer", "package/LegacyDisplayProbe.cpp", "scripts/build-gop-legacy-display.py", "docs/display-plan.md", "package/*Display*", "package/*Framebuffer*", "package/*Backlight*", "package/AppleARMBacklight.cpp", "package/GeniI2c*", "scripts/*display*", "scripts/*gop*", "scripts/*framebuffer*"]
 inputs = [
@@ -135,13 +135,16 @@ findings = [
   "The audit passes on this profile's prelinked candidate: 358 vtable slots, nine abstract leaves and the exact original surface, vsync and refresh-setter bytes.",
   "The backend uses the firmware GOP with QuartzCore's CPU renderer: NativeLegacyDisplay copies each validated full-frame BGRA/RGBA16F surface into the scanout mapping and retires it through the original completion body.",
   "The pinned GopFramebuffer e47c1b8 source is vendored because the workflow's UniXNU submodule is b0d812d, whose ioav/hotplug calls this board does not implement.",
-  "The GPU trace, UFS DPU and Adreno fence symbols are stubbed because the T830 has no driver; the probe markers 295-305 report the display lifecycle on the framebuffer.",
+  "The GPU trace, UFS DPU and Adreno fence symbols are stubbed because the T830 has no driver; the probe markers 295-305 and the full-width stage bars report the display lifecycle on the framebuffer.",
+  "The first sequence registered the native subclass before IOKitBSDInit and stalled bsd_autoconf after the display object was retained. Registering and starting the display from the late probe (after IOKitBSDInit) reached startHardware, start and registerService on hardware.",
+  "The on-device stage bars show prepare/registration/init, late probe, Surface, GOP nub, startHardware and registerService (silver) with no failure bar; the first compositor swap (bright green) has not occurred because userland presentation is not running yet.",
 ]
 completion = ["A known frame appears with correct geometry and colors, then userland presentation and backlight controls work."]
-limits = ["Only the UEFI GOP is used: DECON/DSI, panel power, backlight and touch are not programmed by XNU. The render server draws with the CPU; the T830 GPU is a separate port.", "The static trust cache, SystemOS union and Data volume are not configured yet."]
-next_action = ["Boot the display kernel and confirm markers 295-305 and the first GOP frame; then add touch and the T830 GPU."]
+limits = ["Only the UEFI GOP is used: DECON/DSI, panel power, backlight and touch are not programmed by XNU. The render server draws with the CPU; the T830 GPU is a separate port.", "The display service registers, but no compositor frame has been submitted: the static trust cache, SystemOS union and Data volume are not configured yet, so backboardd/SpringBoard cannot present the UI."]
+next_action = ["Add the static trust cache and the Data/SystemOS startup to get a compositor frame; then add touch and the T830 GPU."]
 evidence = [
   { kind = "host", reference = "docs/display-plan.md", result = "The legacy display ABI audit and every hardcoded family, surface, vsync and refresh byte check pass on this profile's prelinked candidate.", command = "python3.12 scripts/audit-mobile-graphics-legacy.py in the audit tree; the same checks are run by scripts/build-gop-legacy-display.py", revision = "006b531f56f2a6abd1691289a5ee0c22595836aa" },
+  { kind = "device", reference = "PHASE0.md", result = "The prelinked display kernel prepares the display, finds the IOSurface root, starts the GOP nub, reaches startHardware/start and publishes the IOMobileFramebuffer service (full-width bars through the silver registration stage, no dark-red failure, no first-swap bar).", command = "manual boot of the SM-T585 in TWRP-flashed HIDDEN kernel; photos IMG_7776/IMG_7777 show the stage bars", revision = "3ba51af27445a7c29369b6c2abd7d1ee8412aabb" },
 ]
 
 [[area]]

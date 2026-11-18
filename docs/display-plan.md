@@ -103,3 +103,26 @@ The probe marks its stages on the framebuffer bottom row:
 
 With phase 4 and `offline-legacy-transfer=1`, the first accepted swap is copied
 into the GOP; the UEFI menu should be replaced by the iPadOS frame.
+
+## Device result (2026-11-18)
+
+The prelinked display kernel runs on the SM-T585. The first version registered
+the native subclass before `IOKitBSDInit` and stalled `bsd_autoconf` after the
+display object was retained, so the probe now does all class registration,
+allocation and start from the late probe (after `IOKitBSDInit`).
+
+The full-width stage bars show every step on the panel:
+
+- prepare / preModLoad / postModLoad / console / allocate / init
+- late probe entered
+- `IOCoreSurfaceRoot` found
+- GOP nub started
+- `startHardware` / `start` reached
+- `registerService` published the display (silver bar)
+- no failure bar
+- no first-swap bar yet
+
+The display service is therefore live and registered. The panel still shows the
+loader menu because no compositor has submitted a frame: `backboardd` and
+SpringBoard need the static trust cache and the Data/SystemOS startup, which are
+the next workstream. The T830 GPU remains a separate port.
