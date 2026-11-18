@@ -32,12 +32,6 @@ Mapped map_words(uint64_t physical, uint32_t bytes)
     return result;
 }
 
-void release(Mapped &mapped)
-{
-    OSSafeReleaseNULL(mapped.map);
-    OSSafeReleaseNULL(mapped.memory);
-}
-
 uint32_t word(const Mapped &mapped, uint32_t offset)
 {
     return mapped.words ? mapped.words[offset / 4] : 0xffffffffU;
