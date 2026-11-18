@@ -365,6 +365,14 @@ command += ['-Wall', '-Wextra', '-Werror', '-Wno-unused-parameter',
             '-Wno-deprecated-enum-enum-conversion', '-I', str(ROOT / '.cache/xnu-work/osfmk')]
 run(command, cwd=record['directory'])
 
+# Mali-T830 read-only hardware probe (M2): same kernel C++ ABI as the display probe.
+mali_source = ROOT / 'kits/gtaxllte/MaliT830Probe.cpp'
+mali_object = OUT / 'MaliT830Probe.o'
+mali_command = [str(mali_source) if str(arg) == str(source) else
+                str(mali_object) if str(arg) == str(OUT / 'LegacyDisplayProbe.o') else arg
+                for arg in command]
+run(mali_command, cwd=record['directory'])
+
 print(run(['python3', ROOT / 'scripts/build-arm-driver.py', 'NativeGOPPresenter'], text=True), end='')
 gop = ROOT / 'build/native-gop-presenter'
 gop_late = gop / 'NativeGOPPresenter.late.o'
@@ -375,7 +383,7 @@ require(code((gop / 'NativeGOPPresenter.o').read_bytes(), macho((gop / 'NativeGO
         'Owned presenter instructions unchanged by late init staging')
 
 ARCHIVE.unlink(missing_ok=True)
-run(['xcrun', 'ar', 'rcs', ARCHIVE, late, OUT / 'original-bindings.o', OUT / 'LegacyDisplayProbe.o', gop_late])
+run(['xcrun', 'ar', 'rcs', ARCHIVE, late, OUT / 'original-bindings.o', OUT / 'LegacyDisplayProbe.o', mali_object, gop_late])
 sources = [
     ROOT / 'drivers/GopFramebuffer/NativeLegacyDisplay.cpp',
     ROOT / 'drivers/GopFramebuffer/NativeLegacyRequest.h',
@@ -384,6 +392,7 @@ sources = [
     ROOT / 'drivers/GopFramebuffer/NativeHalfCodes.h',
     ROOT / 'drivers/GopFramebuffer/NativeGOPPresenter.cpp',
     ROOT / 'kits/gtaxllte/LegacyDisplayProbe.cpp',
+    ROOT / 'kits/gtaxllte/MaliT830Probe.cpp',
 ]
 report_archive(sources,
                generated_abi_sha256=sha(OUT / 'OriginalLegacyFramebufferABI.h'),

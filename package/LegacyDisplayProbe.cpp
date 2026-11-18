@@ -20,6 +20,7 @@ extern "C" kmod_info_t g_kernel_kmod_info;
 // Direct framebuffer marks for the no-UART tablet: 300+ are display stages.
 extern "C" void gtaxllte_fb_mark(unsigned int, unsigned int);
 extern "C" void gtaxllte_fb_bar(unsigned int, unsigned int);
+extern "C" void native_mali_t830_probe(void);
 extern "C" void native_legacy_display_static_init(void) __asm__("__GLOBAL__sub_I_NativeLegacyDisplay.cpp");
 extern "C" IOService *native_legacy_display_allocate(void);
 extern "C" void native_gop_presenter_static_init(void) __asm__("__GLOBAL__sub_I_NativeGOPPresenter.cpp");
@@ -642,6 +643,7 @@ void native_legacy_display_late_probe(void) {
                         }
                         finishUnitScalePolicy(true);
                         OSSafeReleaseNULL(displayTreeParent);
+                        native_mali_t830_probe();
                         native_legacy_display_checkpoint();return;
                     }
                 }
