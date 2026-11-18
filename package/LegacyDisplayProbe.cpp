@@ -19,6 +19,7 @@
 extern "C" kmod_info_t g_kernel_kmod_info;
 // Direct framebuffer marks for the no-UART tablet: 300+ are display stages.
 extern "C" void gtaxllte_fb_mark(unsigned int, unsigned int);
+extern "C" void gtaxllte_fb_bar(unsigned int, unsigned int);
 extern "C" void native_legacy_display_static_init(void) __asm__("__GLOBAL__sub_I_NativeLegacyDisplay.cpp");
 extern "C" IOService *native_legacy_display_allocate(void);
 extern "C" void native_gop_presenter_static_init(void) __asm__("__GLOBAL__sub_I_NativeGOPPresenter.cpp");
@@ -292,7 +293,7 @@ void native_legacy_swap_validation_observed(bool accepted,unsigned reason,const 
     if(accepted)native_legacy_swap_stage(0);
     if(accepted)native_legacy_swap_accepted_count=native_legacy_swap_accepted_count+1;
     else {native_legacy_swap_rejected_count=native_legacy_swap_rejected_count+1;recordRejectedSwap(reason,request,surface);}
-    if(accepted && native_legacy_swap_accepted_count==1)gtaxllte_fb_mark(305,0x00FFFFFF);
+    if(accepted && native_legacy_swap_accepted_count==1){gtaxllte_fb_mark(305,0x00FFFFFF);native_legacy_stage_bar(12,0x0000FF00);}
     native_legacy_swap_validation_calls=native_legacy_swap_validation_calls+1;
     native_legacy_swap_validation_result=accepted;native_legacy_swap_validation_reason=reason;
     native_legacy_swap_request=(uintptr_t)request;native_legacy_swap_surface=(uintptr_t)surface;
@@ -350,7 +351,7 @@ extern "C" unsigned native_legacy_properties_now(char *out,unsigned cap) {
 }
 void native_legacy_registration_observed(IOService *display) {
     native_legacy_registration_calls=native_legacy_registration_calls+1;
-    gtaxllte_fb_mark(304,0x00FFFFFF);
+    gtaxllte_fb_mark(304,0x00FFFFFF);native_legacy_stage_bar(11,0x00C0C0C0);
     OSSerialize *xml=OSSerialize::withCapacity(2048);
     if(xml && display->serializeProperties(xml)) {
         unsigned size=xml->getLength();if(size>=sizeof(native_legacy_properties))size=sizeof(native_legacy_properties)-1;
@@ -516,23 +517,28 @@ __attribute__((noreturn,noinline)) void native_legacy_backend_guard(unsigned slo
       (unsigned)native_legacy_transfer_status,native_legacy_transfer_bytes,native_legacy_retirement_calls,
       native_legacy_prepare_reason,native_legacy_prepare_attempts);
 }
+static void native_legacy_stage_bar(unsigned stage,unsigned color) {
+    gtaxllte_fb_bar(60 + stage * 40, color);
+}
 static IOService *native_legacy_prepare_display(void) {
     // Run the class constructors and the object init once. The late probe
     // performs this after IOKitBSDInit: registering the native subclass before
     // the prelinked family's IOKit init was completed left the kernel stalled
     // in bsd_autoconf (only marker 298 painted; no late marker).
     if(native_legacy_stage)return pendingLegacyDisplay;
-    native_legacy_stage=1;gtaxllte_fb_mark(295,0x00FFFF00);void *handle=OSMetaClass::preModLoad(g_kernel_kmod_info.name);
+    native_legacy_stage=1;gtaxllte_fb_mark(295,0x00FFFF00);native_legacy_stage_bar(0,0x00FF0000);void *handle=OSMetaClass::preModLoad(g_kernel_kmod_info.name);
     if(!handle){native_legacy_display_checkpoint();return nullptr;}
+    native_legacy_stage_bar(1,0x00FF8000);
     native_legacy_display_static_init();native_gop_presenter_static_init();native_legacy_meta_status=OSMetaClass::postModLoad(handle);
     if(native_legacy_meta_status){native_legacy_display_checkpoint();return nullptr;}
+    native_legacy_stage_bar(2,0x00FFFF00);
     gtaxllte_fb_mark(296,0x0000FF00);
     PE_Video video={};native_legacy_stage=2;
     if(PE_current_console(&video) || !video.v_baseAddr || !video.v_width || !video.v_height || video.v_depth!=32
         || video.v_rotate || video.v_width>16384 || video.v_height>16384 || video.v_rowBytes<video.v_width*4
         || video.v_rowBytes>UINT64_MAX/video.v_height){native_legacy_display_checkpoint();return nullptr;}
-    gtaxllte_fb_mark(297,0x0000FFFF);
-    IOService *display=native_legacy_display_allocate();native_legacy_object=(uintptr_t)display;
+    gtaxllte_fb_mark(297,0x0000FFFF);native_legacy_stage_bar(3,0x0000FF00);
+    native_legacy_stage_bar(4,0x0000FFFF);IOService *display=native_legacy_display_allocate();native_legacy_object=(uintptr_t)display;
     if(!display){native_legacy_display_checkpoint();return nullptr;}
     native_legacy_object_size=display->getMetaClass()->getClassSize();
     native_legacy_parent_match=(display->metaCast("IOMobileFramebufferLegacy") && display->metaCast("IOMobileFramebuffer") && display->metaCast("IOService"));
@@ -541,7 +547,7 @@ static IOService *native_legacy_prepare_display(void) {
     if(native_legacy_init_result && (phase==2 || phase==3 || phase==4)) {
         // IOSurface matches the real IOBSD resource, published by bsd_autoconf.
         // Retain this actual object until that normal lifecycle boundary.
-        gtaxllte_fb_mark(298,0x00FF00FF);pendingLegacyDisplay=display;return display;
+        gtaxllte_fb_mark(298,0x00FF00FF);native_legacy_stage_bar(5,0x000000FF);pendingLegacyDisplay=display;return display;
     }
     native_legacy_stage=7;display->release();native_legacy_released=1;native_legacy_stage=8;
     native_legacy_display_checkpoint();return nullptr;
@@ -569,12 +575,12 @@ void native_legacy_display_late_probe(void);
 void native_legacy_display_late_probe(void) {
     if(!pendingLegacyDisplay)native_legacy_prepare_display();
     IOService *display=pendingLegacyDisplay;if(!display)return;pendingLegacyDisplay=nullptr;
-    gtaxllte_fb_mark(299,0x00FF8000);
+    gtaxllte_fb_mark(299,0x00FF8000);native_legacy_stage_bar(6,0x00FF00FF);
     native_legacy_surface_status=OSKextLoadKextWithIdentifier("com.apple.iokit.IOSurface");
     OSDictionary *matching=IOService::nameMatching("IOCoreSurfaceRoot");
     IOService *surface=matching?IOService::waitForMatchingService(matching,5000000000ULL):nullptr;
     native_legacy_surface_found=surface!=nullptr;OSSafeReleaseNULL(surface);OSSafeReleaseNULL(matching);
-    if(native_legacy_surface_found)gtaxllte_fb_mark(300,0x00FF0000);
+    if(native_legacy_surface_found){gtaxllte_fb_mark(300,0x00FF0000);native_legacy_stage_bar(7,0x00800080);}
     PE_Video video={};
     if(!native_legacy_surface_status && native_legacy_surface_found && !PE_current_console(&video)
         && video.v_baseAddr && video.v_width && video.v_height && video.v_depth==32
@@ -593,7 +599,7 @@ void native_legacy_display_late_probe(void) {
         if(nub && memory && ranges && parent && nub->init()) {
             ranges->setObject(memory);nub->setDeviceMemory(ranges);nub->setName("NativeGOPFramebuffer");
             nubAttached=nub->attach(parent);if(nubAttached)nubStarted=nub->start(parent);
-            if(nubStarted)gtaxllte_fb_mark(301,0x008000FF);
+            if(nubStarted){gtaxllte_fb_mark(301,0x008000FF);native_legacy_stage_bar(8,0x00808000);}
             if(nubStarted) {
                 unsigned phase=0;PE_parse_boot_argn("offline-legacy-phase",&phase,sizeof(phase));
                 if(phase==4) {
@@ -617,7 +623,7 @@ void native_legacy_display_late_probe(void) {
                 } else {
                     SInt32 score=0;native_legacy_probe_match=(phase!=4 || dtAttached) && display->probe(nub,&score)==display;
                     if(native_legacy_probe_match)attached=display->attach(nub);
-                    if(attached){native_legacy_stage=5;started=display->start(nub);native_legacy_start_result=started;if(started)gtaxllte_fb_mark(302,0x0000FF00);}
+                    if(attached){native_legacy_stage=5;started=display->start(nub);native_legacy_start_result=started;if(started){gtaxllte_fb_mark(302,0x0000FF00);native_legacy_stage_bar(9,0x00008000);}}
                     if(started && phase==4) {
                         activeLegacyDisplay=display;activeGOPNub=nub;native_legacy_stage=10;
                         {
@@ -647,7 +653,7 @@ void native_legacy_display_late_probe(void) {
         OSSafeReleaseNULL(ranges);OSSafeReleaseNULL(memory);OSSafeReleaseNULL(nub);
         OSSafeReleaseNULL(displayTreeParent);
     }
-    native_legacy_stage=7;gtaxllte_fb_mark(303,0x00FF0000);display->release();native_legacy_released=1;native_legacy_stage=8;
+    native_legacy_stage=7;gtaxllte_fb_mark(303,0x00FF0000);native_legacy_stage_bar(10,0x00800000);display->release();native_legacy_released=1;native_legacy_stage=8;
     native_legacy_display_checkpoint();
 }
 }
