@@ -183,12 +183,14 @@ findings = [
   "M2 read-only probe on the SM-T585: pd=0x0000000f/0x0003000f (G3D domain on), CMU_G3D mux=0x00200000, div=0, gate=0x000001ff/0x0000007f, gpu=0x08300010, L2=0x07100206, core=0. The T830 ID 0x0830 and the powered GPU are readable without any write.",
   "The G3D domain and CMU_G3D gates are already on at UniXNU handoff; M3 can start with the soft reset/MMU/WRITE_VALUE path and keep a rollback power-down sequence.",
   "The GPU plan and source fork live in UniXNU-mali-t830; the Mesa PanVK arch-5 backend is the M1 host build, the NativeMali JM kernel is the M3 device path.",
+  "M3 first write on the SM-T585: the Panfrost v5 software reset completed (reset=0, GPU_INT_RAWSTAT=0x100), with pd=0x0000000f/0x0003000f, CMU_G3D 0x00200000/0/0x1ff/0x7f, gpu=0x08300010 and l2=0x07100206.",
 ]
 completion = ["GPU submissions complete, mapping/fence handling is correct, a known image renders, and the selected Metal client presents it."]
 limits = ["M2 is read-only and panics for the no-UART record. No GPU write, MMU, job, PanVK device or Metal path exists yet; the visible UI also needs the missing iPad Data/Preboot seed."]
-next_action = ["M3: port the G52 NativeMali JM base to the T830 v5 job header and Exynos 7870, then soft reset, MMU enable and one WRITE_VALUE job with a fence."]
+next_action = ["M3: port the G52 NativeMali JM base to the T830 v5, keep the confirmed soft reset, then enable the MMU and submit one WRITE_VALUE job with a software fence."]
 evidence = [
   { kind = "device", reference = "PHASE0.md", result = "The read-only T830 probe read the G3D domain on (pd=0x0000000f/0x0003000f), CMU_G3D mux/div/gates (0x00200000/0/0x1ff/0x7f), GPU ID 0x08300010 (T830 0x0830 r0p1), L2 features 0x07100206 and core features 0 on the SM-T585.", command = "manual boot of the display kernel with gtaxllte-mali-probe=1; panic photo IMG_7780", revision = "a8ca317267c9c7df7b5ec6515f8b78c49a242309" },
+  { kind = "device", reference = "PHASE0.md", result = "The M3 probe issued the first T830 write: GPU_INT_MASK/CLEAR and GPU_CMD_SOFT_RESET completed (reset=0, GPU_INT_RAWSTAT=0x00000100); GPU_ID remained 0x08300010.", command = "manual boot of the display kernel with gtaxllte-mali-probe=1 gtaxllte-mali-reset=1; panic photo IMG_7784", revision = "2b5731ab9f99a1e1d4f49f4c303031658075e998" },
 ]
 
 [[area]]

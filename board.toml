@@ -161,9 +161,6 @@ kernel_args = [
   "offline-legacy-validate=1",
   "offline-legacy-transfer=1",
   "offline-legacy-cpu-present=1",
-  # M3 first GPU write: read the T830 and issue the Panfrost v5 soft reset.
-  "gtaxllte-mali-probe=1",
-  "gtaxllte-mali-reset=1",
   # The GOP has no vblank interrupt: a 60 Hz work-loop tick stands in for it.
   "sheng-vsync=60",
   "sheng-vsync-fixed=1",
