@@ -52,17 +52,20 @@ extern "C" void native_mali_t830_probe(void)
     }
 
     Mapped pd = map_words(kG3dPdBase, 0x20);
-    Mapped cmu = map_words(kCmuBase, 0x4000);
     uint32_t pd_status = word(pd, 0x04);
     uint32_t pd_control = word(pd, 0x00);
-    uint32_t cmu_mux = word(cmu, 0x0208);
-    uint32_t cmu_div = word(cmu, 0x0400);
-    uint32_t cmu_gate = word(cmu, 0x0804);
-    uint32_t cmu_gate2 = word(cmu, 0x0808);
-
-    Mapped gpu = {};
+    uint32_t cmu_mux = 0xffffffffU, cmu_div = 0xffffffffU, cmu_gate = 0xffffffffU, cmu_gate2 = 0xffffffffU;
     uint32_t gpu_id = 0xffffffffU, gpu_version = 0xffffffffU, gpu_status = 0xffffffffU;
+    Mapped cmu = {}, gpu = {};
+    // CMU_G3D and the GPU registers are inside the G3D domain; read them only
+    // when the domain is on so a read-only probe cannot fault on a powered-off
+    // block. The PMU domain control itself is always accessible.
     if ((pd_status & 0x1U) != 0) {
+        cmu = map_words(kCmuBase, 0x1000);
+        cmu_mux = word(cmu, 0x0208);
+        cmu_div = word(cmu, 0x0400);
+        cmu_gate = word(cmu, 0x0804);
+        cmu_gate2 = word(cmu, 0x0808);
         gpu = map_words(kGpuBase, 0x100);
         gpu_id = word(gpu, 0x00);
         gpu_version = word(gpu, 0x04);
