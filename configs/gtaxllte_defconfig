@@ -26,7 +26,11 @@ CONFIG_XNU_OWNER_DATA_MOUNT=y
 CONFIG_XNU_OWNER_UNION_SYSTEMOS=y
 CONFIG_XNU_OWNER_CACHE_VOLUME_UUID="8846FE78-2910-4297-AF97-D59BB6F8FC16"
 CONFIG_XNU_OWNER_DATA_VOLUME_UUID="76BACD4A-80F1-48F0-B5B6-5A3DE1F123A5"
-CONFIG_XNU_TRUST_CACHE_RUNTIME=y
+# Diagnostic pass: the prelinked trust-cache runtime initializer runs before
+# the original AMFI kext has registered its interface on this board and stops
+# before the display probe. Leave it off until the native AMFI table lands; the
+# owner cache/Data mounts do not depend on it.
+CONFIG_XNU_TRUST_CACHE_RUNTIME=n
 # The GOP/flat-panel legacy backend: the original IOMobileGraphicsFamily
 # lifecycle with an owned framebuffer backend, CPU presentation and the
 # firmware GOP as scanout. It needs the prelinked family closure in board.toml.
