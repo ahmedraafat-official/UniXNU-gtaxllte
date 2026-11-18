@@ -93,6 +93,7 @@ extern void boot_progress_stage(const char *) __attribute__((weak_import));
 volatile uint32_t native_legacy_prepare_calls,native_legacy_prepare_reason,native_legacy_prepare_attempts;
 volatile uint32_t native_legacy_prepare_failures,native_legacy_prepare_retried,native_legacy_prepare_max_attempts;
 volatile uint64_t native_legacy_prepare_wait_us;
+static void native_legacy_stage_bar(unsigned,unsigned);
 static uint64_t probeNowUs(void) {uint64_t ns;absolutetime_to_nanoseconds(mach_absolute_time(),&ns);return ns/1000;}
 bool native_legacy_prepare_scanout(void) {
     native_legacy_prepare_calls=native_legacy_prepare_calls+1;native_legacy_prepare_reason=0;native_legacy_prepare_attempts=0;
