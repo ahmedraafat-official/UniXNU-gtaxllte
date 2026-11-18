@@ -516,24 +516,24 @@ __attribute__((noreturn,noinline)) void native_legacy_backend_guard(unsigned slo
       (unsigned)native_legacy_transfer_status,native_legacy_transfer_bytes,native_legacy_retirement_calls,
       native_legacy_prepare_reason,native_legacy_prepare_attempts);
 }
-void native_legacy_display_probe(void);
-void native_legacy_display_probe(void) {
-    // The registration path and optional original-userclient inspection both
-    // reach this boot-thread entry. Run class constructors only once; a second
-    // postModLoad would attempt to register the same metaclasses again.
-    if(native_legacy_stage)return;
+static IOService *native_legacy_prepare_display(void) {
+    // Run the class constructors and the object init once. The late probe
+    // performs this after IOKitBSDInit: registering the native subclass before
+    // the prelinked family's IOKit init was completed left the kernel stalled
+    // in bsd_autoconf (only marker 298 painted; no late marker).
+    if(native_legacy_stage)return pendingLegacyDisplay;
     native_legacy_stage=1;gtaxllte_fb_mark(295,0x00FFFF00);void *handle=OSMetaClass::preModLoad(g_kernel_kmod_info.name);
-    if(!handle){native_legacy_display_checkpoint();return;}
+    if(!handle){native_legacy_display_checkpoint();return nullptr;}
     native_legacy_display_static_init();native_gop_presenter_static_init();native_legacy_meta_status=OSMetaClass::postModLoad(handle);
-    if(native_legacy_meta_status){native_legacy_display_checkpoint();return;}
+    if(native_legacy_meta_status){native_legacy_display_checkpoint();return nullptr;}
     gtaxllte_fb_mark(296,0x0000FF00);
     PE_Video video={};native_legacy_stage=2;
     if(PE_current_console(&video) || !video.v_baseAddr || !video.v_width || !video.v_height || video.v_depth!=32
         || video.v_rotate || video.v_width>16384 || video.v_height>16384 || video.v_rowBytes<video.v_width*4
-        || video.v_rowBytes>UINT64_MAX/video.v_height){native_legacy_display_checkpoint();return;}
+        || video.v_rowBytes>UINT64_MAX/video.v_height){native_legacy_display_checkpoint();return nullptr;}
     gtaxllte_fb_mark(297,0x0000FFFF);
     IOService *display=native_legacy_display_allocate();native_legacy_object=(uintptr_t)display;
-    if(!display){native_legacy_display_checkpoint();return;}
+    if(!display){native_legacy_display_checkpoint();return nullptr;}
     native_legacy_object_size=display->getMetaClass()->getClassSize();
     native_legacy_parent_match=(display->metaCast("IOMobileFramebufferLegacy") && display->metaCast("IOMobileFramebuffer") && display->metaCast("IOService"));
     native_legacy_stage=3;native_legacy_init_result=display->init();
@@ -541,10 +541,19 @@ void native_legacy_display_probe(void) {
     if(native_legacy_init_result && (phase==2 || phase==3 || phase==4)) {
         // IOSurface matches the real IOBSD resource, published by bsd_autoconf.
         // Retain this actual object until that normal lifecycle boundary.
-        gtaxllte_fb_mark(298,0x00FF00FF);pendingLegacyDisplay=display;return;
+        gtaxllte_fb_mark(298,0x00FF00FF);pendingLegacyDisplay=display;return display;
     }
     native_legacy_stage=7;display->release();native_legacy_released=1;native_legacy_stage=8;
-    native_legacy_display_checkpoint();
+    native_legacy_display_checkpoint();return nullptr;
+}
+void native_legacy_display_probe(void);
+void native_legacy_display_probe(void) {
+    // The early entry is opt-in. By default the class is registered and the
+    // display is created by the late probe, after IOKitBSDInit, so the prelinked
+    // family is fully initialized before the native subclass appears.
+    unsigned early=0;PE_parse_boot_argn("offline-legacy-early",&early,sizeof(early));
+    if(!early)return;
+    native_legacy_prepare_display();
 }
 void native_legacy_display_late_probe(void);
 // The zero-copy plan's P0 map (MdssProbe.cpp): the apps SMMU's display streams, PE_Video, the published frame buffer
@@ -558,6 +567,7 @@ void native_legacy_display_late_probe(void);
 // default off. sheng's CPU frequency and GPU power probes and UniXNU-tb128fu's GPU and USB log probes drive other hardware and
 // are not in this board's archive.
 void native_legacy_display_late_probe(void) {
+    if(!pendingLegacyDisplay)native_legacy_prepare_display();
     IOService *display=pendingLegacyDisplay;if(!display)return;pendingLegacyDisplay=nullptr;
     gtaxllte_fb_mark(299,0x00FF8000);
     native_legacy_surface_status=OSKextLoadKextWithIdentifier("com.apple.iokit.IOSurface");
