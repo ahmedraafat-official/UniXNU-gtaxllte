@@ -1,6 +1,6 @@
 --- a/osfmk/arm/arm_init.c
 +++ b/osfmk/arm/arm_init.c
-@@ -403,7 +403,273 @@
+@@ -403,7 +403,285 @@
  	for (unsigned int dy = 0; dy < 32; dy++) {
  		for (unsigned int x = 0; x < 1200; x++) {
  			fb[(y + dy) * row + x] = color;
@@ -42,6 +42,7 @@
 +#define GT_MMC_CMD_WAIT     (1u << 13)
 +#define GT_MMC_CMD_HOLD     (1u << 29)
 +#define GT_MMC_CMD_START    (1u << 31)
++#define GT_MMC_RINT_CDONE   (1u << 2)
 +#define GT_MMC_RINT_RXDR    (1u << 5)
 +#define GT_MMC_RINT_TXDR    (1u << 4)
 +#define GT_MMC_RINT_DTO     (1u << 3)
@@ -141,6 +142,17 @@
 +	    24u | GT_MMC_CMD_RESP | GT_MMC_CMD_CRC | GT_MMC_CMD_DATA |
 +	    GT_MMC_CMD_WRITE | GT_MMC_CMD_WAIT | GT_MMC_CMD_HOLD |
 +	    GT_MMC_CMD_START);
++	/* MshcSendCommand: wait for CMD24 completion before the FIFO. */
++	for (spin = 0; spin < 200000; spin++) {
++		rint = gtaxllte_emmc_rd(base, GT_MSHCI_RINTSTS);
++		if (rint & (GT_MMC_RINT_CDONE | GT_MMC_RINT_ERRORS)) {
++			break;
++		}
++	}
++	if (rint & GT_MMC_RINT_ERRORS) {
++		*rint_out = rint;
++		return -1;
++	}
 +	/* MshcWriteData: free = depth - FIFO count; write whole FIFO items. */
 +	while (doneItems < 64) {
 +		unsigned int freeItems, items;
@@ -274,7 +286,7 @@
  	}
  }
  
-@@ -600,6 +866,9 @@
+@@ -600,6 +878,9 @@
  	vinfo.v_depth    = 32;
  	vinfo.v_rowbytes = 1200 * 4;
  	gtaxllte_fb_bar(400, 0x0000FF00);   /* arm_vm_init returned: green */
@@ -284,7 +296,7 @@
  
  	if (debug_boot_arg) {
  		patch_low_glo();
-@@ -659,6 +928,7 @@
+@@ -659,6 +940,7 @@
  	/* setup console output */
  	PE_init_printf(FALSE);
  	gtaxllte_fb_bar(500, 0x00FF0000);   /* console init returned: red */
