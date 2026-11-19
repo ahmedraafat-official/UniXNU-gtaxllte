@@ -661,3 +661,12 @@ extern "C" int native_ufs_store_write(uint64_t, uint32_t, const void *) { return
 extern "C" int native_ufs_store_write_cached(uint64_t, uint32_t, const void *) { return 0; }
 extern "C" int native_ufs_store_sync(void) { return 0; }
 extern "C" unsigned native_ufs_store_gpt_check(void) { return 0; }
+
+// The GPU addon patch references this RamBlock helper even when no addon is
+// built; answer without a seed.
+extern "C" int native_ram_block_gpu_addon(const uint8_t **data, uint64_t *bytes)
+{
+  if (data) *data = nullptr;
+  if (bytes) *bytes = 0;
+  return 0;
+}
