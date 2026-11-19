@@ -24,7 +24,7 @@ kit = "gtaxllte"
 # and four of its method slots point into unmapped prelink space and the kernel
 # panics in OSMetaClass::postModLoad. Revisit when a prelinked payload fits BOOT
 # or the kext collection is mapped by the native kernel.
-include = ["ArmDTPlatform", "ArmCpu", "RamBlock", "XnuPrelink", "DarwinBoot", "GopFramebuffer"]
+include = ["ArmDTPlatform", "ArmCpu", "XnuPrelink", "DarwinBoot", "GopFramebuffer"]
 
 [kernel]
 defconfig = "gtaxllte_defconfig"
