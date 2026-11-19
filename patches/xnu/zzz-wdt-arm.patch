@@ -1,0 +1,22 @@
+--- a/osfmk/arm64/start.s
++++ b/osfmk/arm64/start.s
+@@ -222,7 +222,19 @@
+ 	.align	3
+ 	.globl EXT(_start)
+ LEXT(_start)
++	/* gtaxllte debug: arm the s3c2410 watchdog at 0x10170000 while the MMU
++	 * is still off. A hang before arm_vm_init then resets into TWRP. */
++	movz	x9, #0x0000
++	movk	x9, #0x1017, lsl #16
++	movz	w10, #0xFF39
++	str	w10, [x9, #0]
++	movz	w10, #0x0000
++	movk	w10, #0x0001, lsl #16
++	str	w10, [x9, #4]
++	str	w10, [x9, #8]
++	dsb	sy
++	isb
+ 	b	EXT(start_first_cpu)
+ 
+ 
+ /*

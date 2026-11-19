@@ -91,6 +91,7 @@ jobs:
           zzz-max-cpus.patch
           zzz-native-dwmmc-personality.patch
           zzz-bootstrap-table.patch
+          zzz-wdt-arm.patch
           zzz-root-probe.patch
           EOF
       - name: native config audit
