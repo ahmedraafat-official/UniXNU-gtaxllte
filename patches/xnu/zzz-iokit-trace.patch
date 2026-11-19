@@ -10,12 +10,14 @@
  	DTEntry         entry;
  	unsigned int    size, scale;
  	unsigned long   display_size;
-@@ -258,7 +255,11 @@
+@@ -258,7 +255,13 @@
  	uint32_t        load_kernel_start_value = 0;
  	uint32_t        populate_registry_time_value = 0;
  
 +	extern void gtaxllte_fb_mark(unsigned int, unsigned int);
++	extern void gtaxllte_boot_log(unsigned int);
 +	gtaxllte_fb_mark(1, 0x00FFFF00);   /* PE_init_iokit: entry */
++	gtaxllte_boot_log(3);              /* PE_init_iokit: entry */
 +
  	PE_init_printf(TRUE);
 +	gtaxllte_fb_mark(2, 0x00FFFF00);   /* vcattach returned */
