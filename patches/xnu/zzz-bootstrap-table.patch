@@ -1,0 +1,14 @@
+--- a/osfmk/arm/pmap/pmap.h
++++ b/osfmk/arm/pmap/pmap.h
+@@ -114,7 +114,10 @@
+  * 2 L1 tables (Linear KVA and V=P), plus 2*16 L2 tables map up to (16*64GB) 1TB of DRAM
+  * Upper limit on how many pages can be consumed by bootstrap page tables
+  */
+-#define BOOTSTRAP_TABLE_SIZE (ARM_PGBYTES * 8)
++/* gtaxllte: the prelinked native archives and the packed Data seed grow the
++ * kernel data window; keep enough bootstrap page-table pages for the
++ * arm_vm_init mapping (the original eight-page budget is too tight). */
++#define BOOTSTRAP_TABLE_SIZE (ARM_PGBYTES * 24)
+ #endif /* defined(ARM_LARGE_MEMORY) */
+ 
+ typedef uint64_t tt_entry_t; /* translation table entry type */
