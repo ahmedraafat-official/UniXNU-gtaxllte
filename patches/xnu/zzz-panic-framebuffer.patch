@@ -1,6 +1,6 @@
 --- a/osfmk/arm/arm_init.c
 +++ b/osfmk/arm/arm_init.c
-@@ -337,6 +337,77 @@
+@@ -337,6 +337,63 @@
  }
  
  /*
@@ -60,34 +60,11 @@
 +	}
 +}
 +
-+/* Before arm_vm_init the MMU is off: write the physical GOP framebuffer
-+ * directly so a stop inside VM setup is still visible. */
-+void
-+gtaxllte_fb_early(unsigned int y, unsigned int color)
-+{
-+	volatile unsigned int *fb = (volatile unsigned int *)0x67000000UL;
-+	unsigned int row = 1200;
-+	for (unsigned int dy = 0; dy < 32; dy++) {
-+		for (unsigned int x = 0; x < 1200; x++) {
-+			fb[(y + dy) * row + x] = color;
-+		}
-+	}
-+}
-+
 +/*
   *		Routine:		arm_init
   *		Function:		Runs on the boot CPU, once, on entry from iBoot.
   */
-@@ -353,6 +424,8 @@
- 	DTEntry chosen = NULL;
- 	unsigned int dt_entry_size = 0;
- 
-+	gtaxllte_fb_early(300, 0x00FF00FF);   /* arm_init entered: magenta */
-+
- 	arm_setup_pre_sign();
- 
- 	arm_slide_rebase_and_sign_image();
-@@ -521,6 +594,13 @@
+@@ -521,6 +578,13 @@
  
  	arm_vm_init(xmaxmem, args);
  
@@ -101,7 +78,7 @@
  	if (debug_boot_arg) {
  		patch_low_glo();
  	}
-@@ -578,6 +658,7 @@
+@@ -578,6 +642,7 @@
  
  	/* setup console output */
  	PE_init_printf(FALSE);
