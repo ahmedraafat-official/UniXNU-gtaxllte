@@ -1,11 +1,13 @@
 --- a/bsd/kern/bsd_init.c	2026-11-17 22:11:54
 +++ b/bsd/kern/bsd_init.c	2026-11-17 22:11:54
-@@ -682,6 +682,7 @@
+@@ -682,6 +682,9 @@
  bsd_init(void)
  {
  	extern void gtaxllte_fb_bar(unsigned int, unsigned int);
 +	extern void gtaxllte_fb_mark(unsigned int, unsigned int);
++	extern void gtaxllte_boot_log(unsigned int);
  	gtaxllte_fb_bar(700, 0x00FFFF00);   /* bsd_init entered: yellow */
++	gtaxllte_boot_log(4);               /* bsd_init entered */
  
  	/*
 @@ -1173,6 +1174,7 @@
@@ -16,35 +18,39 @@
  
  		bsd_init_kprintf("calling setconf\n");
  		setconf();
-@@ -1182,8 +1184,15 @@
+@@ -1182,8 +1184,17 @@
  
  		bsd_init_kprintf("vfs_mountroot\n");
  		if (0 == (err = vfs_mountroot())) {
 +			gtaxllte_fb_mark(290, 0x00FFFFFF);   /* root mounted */
++			gtaxllte_boot_log(5);                /* root mounted */
  			break;
  		}
 +		gtaxllte_mount_attempts++;
 +		gtaxllte_fb_mark(283 + (gtaxllte_mount_attempts & 3), 0x00FFFFFF);
 +		if (gtaxllte_mount_attempts >= 3) {
++			gtaxllte_boot_log(63);   /* root mount failed */
 +			panic("gtaxllte mountroot try=%d err=%d rootdev=%s",
 +			    gtaxllte_mount_attempts, err, rootdevice);
 +		}
  		rootdevice[0] = '\0';
  #if CONFIG_NETBOOT
  		if (netboot) {
-@@ -1216,6 +1225,7 @@
+@@ -1216,6 +1225,8 @@
  	lck_rw_lock_exclusive(&rootvnode_rw_lock);
  	set_rootvnode(init_rootvnode);
  	lck_rw_unlock_exclusive(&rootvnode_rw_lock);
 +	gtaxllte_fb_mark(291, 0x00FFFFFF);   /* root vnode installed */
++	gtaxllte_boot_log(6);                /* root vnode installed */
  	init_rootvnode = NULLVP;  /* use rootvnode after this point */
  
  
-@@ -1447,6 +1457,7 @@
+@@ -1447,6 +1457,8 @@
  
  	bsd_init_kprintf("bsd_do_post - done");
  
 +	gtaxllte_fb_mark(292, 0x00FFFFFF);   /* about to load init */
++	gtaxllte_boot_log(7);                /* about to load init */
  	load_init_program(p);
  	lock_trace = 1;
  }

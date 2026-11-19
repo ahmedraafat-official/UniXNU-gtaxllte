@@ -1,9 +1,14 @@
---- a/osfmk/arm/arm_init.c	2026-11-16 23:43:53
-+++ b/osfmk/arm/arm_init.c	2026-11-16 23:43:53
-@@ -394,6 +394,165 @@
- }
- 
- /*
+--- a/osfmk/arm/arm_init.c
++++ b/osfmk/arm/arm_init.c
+@@ -403,11 +403,259 @@
+ 	for (unsigned int dy = 0; dy < 32; dy++) {
+ 		for (unsigned int x = 0; x < 1200; x++) {
+ 			fb[(y + dy) * row + x] = color;
++		}
++	}
++}
++
++/*
 + * gtaxllte early eMMC probe, gated by the "emmc-probe=1" boot argument.
 + *
 + * The full E1/E2 record can then be collected before IOKit, so a hang in
@@ -37,6 +42,7 @@
 +#define GT_MMC_CMD_HOLD     (1u << 29)
 +#define GT_MMC_CMD_START    (1u << 31)
 +#define GT_MMC_RINT_RXDR    (1u << 5)
++#define GT_MMC_RINT_TXDR    (1u << 4)
 +#define GT_MMC_RINT_DTO     (1u << 3)
 +#define GT_MMC_STATUS_BUSY  (1u << 9)
 +#define GT_MMC_RINT_ERRORS  ((1u << 1) | (1u << 6) | (1u << 7) | \
@@ -111,6 +117,94 @@
 +	    !(rint & GT_MMC_RINT_ERRORS)) ? 0 : -1;
 +}
 +
++static int
++gtaxllte_emmc_write_block(unsigned long base, unsigned int fifo,
++    unsigned int lba, const unsigned int *words, unsigned int *rint_out)
++{
++	unsigned int spin, rint = 0, status, done = 0;
++
++	for (spin = 0; spin < 200000; spin++) {
++		if (!(gtaxllte_emmc_rd(base, GT_MSHCI_STATUS) &
++		    GT_MMC_STATUS_BUSY)) {
++			break;
++		}
++	}
++	gtaxllte_emmc_wr(base, GT_MSHCI_RINTSTS, 0xffffffffu);
++	gtaxllte_emmc_wr(base, GT_MSHCI_TMOUT, 0xffffffffu);
++	gtaxllte_emmc_wr(base, GT_MSHCI_BLKSIZ, 512);
++	gtaxllte_emmc_wr(base, GT_MSHCI_BYTCNT, 512);
++	gtaxllte_emmc_wr(base, GT_MSHCI_CMDARG, lba);
++	gtaxllte_emmc_wr(base, GT_MSHCI_CMD,
++	    24u | GT_MMC_CMD_RESP | GT_MMC_CMD_CRC | GT_MMC_CMD_DATA |
++	    GT_MMC_CMD_WAIT | GT_MMC_CMD_HOLD | GT_MMC_CMD_START);
++	for (spin = 0; spin < 2000000 && done < 128; spin++) {
++		rint = gtaxllte_emmc_rd(base, GT_MSHCI_RINTSTS);
++		if (rint & GT_MMC_RINT_ERRORS) {
++			break;
+ 		}
++		if (rint & GT_MMC_RINT_TXDR) {
++			gtaxllte_emmc_wr(base, fifo, words[done++]);
++			gtaxllte_emmc_wr(base, GT_MSHCI_RINTSTS,
++			    GT_MMC_RINT_TXDR);
++		}
+ 	}
++	if (done == 128) {
++		for (spin = 0; spin < 200000; spin++) {
++			rint = gtaxllte_emmc_rd(base, GT_MSHCI_RINTSTS);
++			if (rint & (GT_MMC_RINT_DTO | GT_MMC_RINT_ERRORS)) {
++				break;
++			}
++		}
++	}
++	for (spin = 0; spin < 200000; spin++) {
++		status = gtaxllte_emmc_rd(base, GT_MSHCI_STATUS);
++		if (!(status & GT_MMC_STATUS_BUSY)) {
++			break;
++		}
++	}
++	*rint_out = rint;
++	return (done == 128 && (rint & GT_MMC_RINT_DTO) &&
++	    !(rint & GT_MMC_RINT_ERRORS)) ? 0 : -1;
+ }
+ 
+ /*
++ * Persistent early-boot stages in the last 32 MiB of USERDATA, outside the
++ * SHNGROOT OS/SystemOS windows. One 512-byte sector per stage: the TWRP
++ * reader script pulls them without a photo.
++ */
++#define GT_BOOT_LOG_LBA 61056000u
++
++void
++gtaxllte_boot_log(unsigned int stage)
++{
++	extern vm_offset_t ml_io_map(vm_offset_t, vm_size_t);
++	unsigned long base;
++	unsigned int verid, fifo, rint = 0;
++	unsigned int words[128];
++
++	if (stage > 63) {
++		return;
++	}
++	base = ml_io_map(0x13540000, 0x2000);
++	if (base == 0) {
++		return;
++	}
++	verid = gtaxllte_emmc_rd(base, GT_MSHCI_VERID);
++	if (verid == 0xffffffffu) {
++		return;
++	}
++	fifo = ((verid & 0xffffu) < 0x240au) ? GT_MSHCI_FIFO_OLD : GT_MSHCI_FIFO_240A;
++	for (unsigned int i = 0; i < 128; i++) {
++		words[i] = 0;
++	}
++	words[0] = 0x58415447u;   /* GTAX */
++	words[1] = 0x31474f4cu;   /* LOG1 */
++	words[2] = stage;
++	words[3] = 0x47415458u;   /* XTAG */
++	(void)gtaxllte_emmc_write_block(base, fifo, GT_BOOT_LOG_LBA + stage,
++	    words, &rint);
++}
++
 +static void
 +gtaxllte_emmc_probe(void)
 +{
@@ -166,12 +260,21 @@
   *		Routine:		arm_init
   *		Function:		Runs on the boot CPU, once, on entry from iBoot.
   */
-@@ -594,6 +753,8 @@
+@@ -600,6 +848,9 @@
  	vinfo.v_depth    = 32;
  	vinfo.v_rowbytes = 1200 * 4;
  	gtaxllte_fb_bar(400, 0x0000FF00);   /* arm_vm_init returned: green */
++	gtaxllte_boot_log(1);               /* arm_vm_init returned */
 +	gtaxllte_fb_mark(33, 0x00FFFFFF);   /* early probe gate evaluated */
 +	gtaxllte_emmc_probe();              /* emmc-probe=1: panic with E1/E2 */
  
  	if (debug_boot_arg) {
  		patch_low_glo();
+@@ -659,6 +910,7 @@
+ 	/* setup console output */
+ 	PE_init_printf(FALSE);
+ 	gtaxllte_fb_bar(500, 0x00FF0000);   /* console init returned: red */
++	gtaxllte_boot_log(2);               /* console initialized */
+ 
+ #if __arm64__
+ #if DEBUG

@@ -1,11 +1,13 @@
 --- a/pexpert/arm/pe_init.c	2026-11-16 21:19:48
 +++ b/pexpert/arm/pe_init.c	2026-11-16 21:19:48
-@@ -244,6 +244,9 @@
+@@ -244,6 +244,11 @@
  void
  PE_init_iokit(void)
  {
 +	extern void gtaxllte_fb_bar(unsigned int, unsigned int);
 +	gtaxllte_fb_bar(600, 0x000000FF);   /* PE_init_iokit entered: blue */
++	extern void gtaxllte_boot_log(unsigned int);
++	gtaxllte_boot_log(3);               /* PE_init_iokit entered */
 +
  	DTEntry         entry;
  	unsigned int    size, scale;
