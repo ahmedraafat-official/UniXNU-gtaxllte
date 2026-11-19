@@ -1,14 +1,18 @@
 --- a/osfmk/arm/pmap/pmap.h
 +++ b/osfmk/arm/pmap/pmap.h
-@@ -116,7 +116,10 @@
+@@ -116,11 +116,15 @@
+  * Upper limit on how many pages can be consumed by bootstrap page tables
   */
  #define BOOTSTRAP_TABLE_SIZE (ARM_PGBYTES * 34)
- #else /* defined(ARM_LARGE_MEMORY) */
--#define BOOTSTRAP_TABLE_SIZE (ARM_PGBYTES * 8)
-+/* gtaxllte: the prelinked native archives and the packed Data seed grow the
-+ * kernel data window; keep enough bootstrap page-table pages for the
-+ * arm_vm_init mapping (the original eight-page budget is too tight). */
+ #elif !defined(APPLE_ARM64_ARCH_FAMILY) && !__ARM_16K_PG__
+ /* Native 4 KiB: two roots plus up to seven L2 pages per 6 GiB mapping.
+  * The physical and virtual bases may each straddle an extra 1 GiB region.
+  */
+ #define BOOTSTRAP_TABLE_SIZE (ARM_PGBYTES * 16)
++#elif defined(APPLE_ARM64_ARCH_FAMILY)
++/* gtaxllte: the prelinked Apple kernel plus the native owner/Data archives
++ * needs more than the original eight-page bootstrap table. */
 +#define BOOTSTRAP_TABLE_SIZE (ARM_PGBYTES * 24)
+ #else /* defined(ARM_LARGE_MEMORY) */
+ #define BOOTSTRAP_TABLE_SIZE (ARM_PGBYTES * 8)
  #endif /* defined(ARM_LARGE_MEMORY) */
- 
- typedef uint64_t tt_entry_t; /* translation table entry type */
