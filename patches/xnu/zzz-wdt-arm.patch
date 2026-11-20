@@ -1,9 +1,22 @@
 --- a/osfmk/arm64/start.s
 +++ b/osfmk/arm64/start.s
-@@ -222,7 +222,19 @@
+@@ -222,6 +222,31 @@
  	.align	3
  	.globl EXT(_start)
  LEXT(_start)
++	/* gtaxllte debug: magenta bar at y=250 with the MMU still off. */
++	movz	x9, #0x0000
++	movk	x9, #0x6700, lsl #16
++	movz	w10, #0x00FF
++	movk	w10, #0xFFFF, lsl #16
++	movz	x11, #0x4F80
++	movk	x11, #0x0012, lsl #16
++	add	x9, x9, x11
++	movz	x11, #0x9600
++1:	stp	w10, w10, [x9], #8
++	subs	x11, x11, #2
++	b.ne	1b
++	dsb	sy
 +	/* gtaxllte debug: arm the s3c2410 watchdog at 0x10170000 while the MMU
 +	 * is still off. A hang before arm_vm_init then resets into TWRP. */
 +	movz	x9, #0x0000
@@ -19,4 +32,23 @@
  	b	EXT(start_first_cpu)
  
  
- /*
+@@ -634,6 +659,19 @@
+  *	TPIDRRO_EL0 - CPU number
+  */
+ common_start:
++	/* gtaxllte debug: cyan bar at y=282; the MMU is still off. */
++	movz	x9, #0x0000
++	movk	x9, #0x6700, lsl #16
++	movz	w10, #0xFFFF
++	movk	w10, #0xFF00, lsl #16
++	movz	x11, #0xA600
++	movk	x11, #0x0014, lsl #16
++	add	x9, x9, x11
++	movz	x11, #0x9600
++2:	stp	w10, w10, [x9], #8
++	subs	x11, x11, #2
++	b.ne	2b
++	dsb	sy
+ 
+ #if HAS_NEX_PG
+ 	mov x19, lr
